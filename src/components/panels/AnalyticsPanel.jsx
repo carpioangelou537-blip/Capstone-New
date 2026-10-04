@@ -165,6 +165,7 @@ export default function AnalyticsPanel({ alumni, jobs, surveyResponses = [] }) {
                   borderRadius: 8,
                   fontSize: "0.76rem",
                 }}
+                itemStyle={{ color: "#fff" }}
                 labelStyle={{ color: "#fff", fontWeight: 700 }}
               />
               <Legend

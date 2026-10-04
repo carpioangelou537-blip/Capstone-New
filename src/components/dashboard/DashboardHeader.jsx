@@ -6,6 +6,9 @@ export default function DashboardHeader({
   name,
   me,
   notifications,
+  unreadCount = 0,
+  canGoBack = false,
+  onBack,
   notifOpen,
   onToggleNotif,
   surveyLocked,
@@ -22,6 +25,12 @@ export default function DashboardHeader({
         <h1>{role === "admin" ? "Alumni Affairs Office Dashboard" : "My Alumni Dashboard"}</h1>
       </div>
       <div className="dash-header-actions">
+        {canGoBack && (
+          <button type="button" className="dash-profile-action" onClick={onBack}>
+            <Icon name="arrowLeft" size={16} />
+            <span>Back</span>
+          </button>
+        )}
         {role === "alumni" && (
           <div className="notif-wrap">
             <button
@@ -32,7 +41,7 @@ export default function DashboardHeader({
             >
               <Icon name="bell" size={18} />
               <span>Notifications</span>
-              {notifications.length > 0 && <span className="ping-dot" />}
+              {unreadCount > 0 && <span className="ping-dot" />}
             </button>
             {notifOpen && (
               <NotificationDropdown

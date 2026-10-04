@@ -43,10 +43,11 @@ export function AdminDashboardOverview({ alumni, jobs, events, notifications, on
 
 export function AlumniDashboardOverview({ me, jobs, events, notifications, onNavigate }) {
   const matchedJobs = jobs.filter((j) => j.skills.some((s) => me.skills.some((ms) => ms.toLowerCase() === s.toLowerCase()))).length;
-  const uniqueMatchedSkills = [...new Set(me.skills.filter((skill) =>
-    jobs.some((j) => j.skills.some((s) => s.toLowerCase() === skill.toLowerCase()))
-  ))];
-  const alignmentPct = me.skills.length ? Math.round((uniqueMatchedSkills.length / me.skills.length) * 100) : 0;
+  const demandedSkills = [...new Set(jobs.flatMap((job) => job.skills.map((skill) => skill.toLowerCase())))];
+  const matchedSkills = demandedSkills.filter((skill) => me.skills.some((item) => item.toLowerCase() === skill));
+  const alignmentPct = (me.employed === "Employed" || me.employed === "Self Employed") && demandedSkills.length
+    ? Math.round((matchedSkills.length / demandedSkills.length) * 100)
+    : 0;
   const updates = [
     ...notifications.map((n) => ({ id: n.id, text: n.text, date: n.date, target: n.target })),
     ...events.map((e) => ({ id: `ev-${e.id}`, text: `Upcoming: ${e.title}`, date: e.date, target: "Events & Activities" })),

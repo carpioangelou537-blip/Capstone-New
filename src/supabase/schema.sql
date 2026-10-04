@@ -39,6 +39,9 @@ create table if not exists public.alumni (
   full_name           text not null,
   program             text not null,
   grad_year           integer,
+  date_of_birth       date,
+  address             text default '',
+  contact_number      text default '',
   employed            text default 'Unknown',
   job_title           text default '',
   company_name        text default '',
@@ -52,6 +55,10 @@ create table if not exists public.alumni (
   created_at          timestamptz default timezone('utc', now()),
   updated_at          timestamptz default timezone('utc', now())
 );
+
+alter table public.alumni add column if not exists date_of_birth date;
+alter table public.alumni add column if not exists address text default '';
+alter table public.alumni add column if not exists contact_number text default '';
 
 drop trigger if exists trg_alumni_updated_at on public.alumni;
 create trigger trg_alumni_updated_at

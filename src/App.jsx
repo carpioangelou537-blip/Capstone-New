@@ -276,8 +276,14 @@ export default function App() {
 
   const actions = {
     updateSelf(patch) {
-      setAlumni((list) => list.map((a) => (a.isSelf || (me && a.userId === me.userId) ? { ...a, ...patch } : a)));
-      if (me) api.updateAlumnus(me.id, patch).catch(() => {});
+      const { email, ...profilePatch } = patch;
+      setAlumni((list) => list.map((a) => (a.isSelf || (me && a.userId === me.userId) ? { ...a, ...profilePatch } : a)));
+      if (me) api.updateAlumnus(me.id, profilePatch).catch(() => {});
+      if (email && email !== user?.email) {
+        api.updateAuthEmail(email).then(({ error }) => {
+          addToast(error ? "Profile saved, but the email change could not be started." : "Check your inbox to confirm the new email address.");
+        }).catch(() => addToast("Profile saved, but the email change could not be started."));
+      }
       addToast("Profile updated.");
     },
     submitSurvey({ employed, jobTitle, companyName, businessName, years, skills }) {
@@ -494,7 +500,7 @@ export default function App() {
   if (page === "splash") {
     body = <SplashScreen />;
   } else if (page === "dashboard") {
-    body = <Dashboard role={role} name={name} me={me} domain={domain} onLogout={handleLogout} />;
+    body = <Dashboard role={role} name={name} me={me} email={user?.email || ""} domain={domain} onLogout={handleLogout} />;
   } else if (page === "signup") {
     body = (
       <SignupPage

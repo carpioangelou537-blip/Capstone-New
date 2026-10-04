@@ -20,7 +20,7 @@ import EventsAlumniPanel from "../panels/EventsAlumniPanel";
 import ProfileModal from "../modals/ProfileModal";
 import SurveyModal from "../modals/SurveyModal";
 
-export default function Dashboard({ role, name, me, domain, onLogout }) {
+export default function Dashboard({ role, name, me, email, domain, onLogout }) {
   const {
     alumni,
     jobs,
@@ -38,6 +38,9 @@ export default function Dashboard({ role, name, me, domain, onLogout }) {
     name: name || (role === "admin" ? "Administrator" : "Alumnus"),
     program: "",
     gradYear: "",
+    dateOfBirth: "",
+    address: "",
+    contactNumber: "",
     employed: "Unknown",
     jobTitle: "",
     companyName: "",
@@ -50,6 +53,8 @@ export default function Dashboard({ role, name, me, domain, onLogout }) {
     isSelf: false,
   };
   const features = role === "admin" ? ADMIN_FEATURES : getAlumniFeatures();
+  const notificationReadKey = `alumni-tracer-read-${role}-${safeMe.userId || safeMe.id || "guest"}`;
+  const seenFeaturesKey = `alumni-tracer-seen-${role}-${safeMe.userId || safeMe.id || "guest"}`;
 
   const [active, setActive] = useState(features[0].title);
   const [entered, setEntered] = useState(false);
@@ -57,6 +62,46 @@ export default function Dashboard({ role, name, me, domain, onLogout }) {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [surveyModalOpen, setSurveyModalOpen] = useState(false);
   const [surveyDismissed, setSurveyDismissed] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState([]);
+  const [seenFeatures, setSeenFeatures] = useState([]);
+  const [navigationHistory, setNavigationHistory] = useState([]);
+
+  useEffect(() => {
+    try {
+      setReadNotificationIds(JSON.parse(localStorage.getItem(notificationReadKey) || "[]"));
+    } catch {
+      setReadNotificationIds([]);
+    }
+  }, [notificationReadKey]);
+
+  useEffect(() => {
+    try {
+      setSeenFeatures(JSON.parse(localStorage.getItem(seenFeaturesKey) || "[]"));
+    } catch {
+      setSeenFeatures([]);
+    }
+  }, [seenFeaturesKey]);
+
+  const unreadNotificationCount = notifications.filter((notification) => !readNotificationIds.includes(String(notification.id))).length;
+
+  function markNotificationsRead() {
+    const ids = notifications.map((notification) => String(notification.id));
+    const nextReadIds = [...new Set([...readNotificationIds, ...ids])];
+    setReadNotificationIds(nextReadIds);
+    localStorage.setItem(notificationReadKey, JSON.stringify(nextReadIds));
+  }
+
+  function toggleNotifications() {
+    const opening = !notifOpen;
+    setNotifOpen(opening);
+    if (opening) markNotificationsRead();
+  }
+
+  function markFeatureSeen(title) {
+    const nextSeen = [...new Set([...seenFeatures, title])];
+    setSeenFeatures(nextSeen);
+    localStorage.setItem(seenFeaturesKey, JSON.stringify(nextSeen));
+  }
 
   useEffect(() => {
     const t = setTimeout(() => setEntered(true), 60);
@@ -75,7 +120,7 @@ export default function Dashboard({ role, name, me, domain, onLogout }) {
   function handleSurveySubmit(data) {
     if (!safeMe) return;
     actions.submitSurvey(data);
-    setActive(data.employed === "Unemployed" ? "Career Tools" : "Job Alignment");
+    goToFeature(data.employed === "Unemployed" ? "Career Tools" : "Job Alignment");
   }
 
   function handleModalSubmit(data) {
@@ -85,7 +130,18 @@ export default function Dashboard({ role, name, me, domain, onLogout }) {
   }
 
   function goToFeature(title) {
+    if (title !== active) setNavigationHistory((history) => [...history, active]);
+    markFeatureSeen(title);
+    if (role === "admin" && title === "Manage Notifications") markNotificationsRead();
     setActive(title);
+  }
+
+  function goBack() {
+    if (navigationHistory.length === 0) return;
+    const previous = navigationHistory[navigationHistory.length - 1];
+    setNavigationHistory((history) => history.slice(0, -1));
+    markFeatureSeen(previous);
+    setActive(previous);
   }
 
   const surveyedCount = alumni.filter((a) => a.surveyCompleted).length;
@@ -112,12 +168,13 @@ export default function Dashboard({ role, name, me, domain, onLogout }) {
   };
 
   function getBadge(title) {
+    if (seenFeatures.includes(title) && !(title === "Manage Notifications" && unreadNotificationCount > 0)) return null;
     if (role === "admin") {
       if (title === "Login & Verification") return pendingVerifications;
       if (title === "Manage User Accounts") return alumni.length;
       if (title === "View Alumni Information") return alumni.length;
       if (title === "View Survey Results") return surveyedCount;
-      if (title === "Manage Notifications") return notifications.length;
+      if (title === "Manage Notifications") return unreadNotificationCount;
       if (title === "Career Tools & Job Postings") return jobs.length;
       if (title === "Manage Event Posting") return totalRsvps;
     } else {
@@ -183,7 +240,14 @@ export default function Dashboard({ role, name, me, domain, onLogout }) {
         <SurveyModal me={safeMe} onSubmit={handleModalSubmit} onClose={() => { setSurveyModalOpen(false); setSurveyDismissed(true); }} />
       )}
       {profileModalOpen && role === "alumni" && (
-        <ProfileModal me={safeMe} onSave={actions.updateSelf} onClose={() => setProfileModalOpen(false)} />
+        <ProfileModal
+          me={safeMe}
+          email={email}
+          latestSurveyStatus={mySurveyHistory[0]?.employed || safeMe.employed}
+          latestSurvey={mySurveyHistory[0] || (safeMe.surveyCompleted ? safeMe : null)}
+          onSave={actions.updateSelf}
+          onClose={() => setProfileModalOpen(false)}
+        />
       )}
 
       <DashboardSidebar
@@ -203,7 +267,10 @@ export default function Dashboard({ role, name, me, domain, onLogout }) {
           me={safeMe}
           notifications={notifications}
           notifOpen={notifOpen}
-          onToggleNotif={() => setNotifOpen((o) => !o)}
+          onToggleNotif={toggleNotifications}
+          unreadCount={unreadNotificationCount}
+          canGoBack={navigationHistory.length > 0}
+          onBack={goBack}
           onGoto={goToFeature}
           onCloseNotif={() => setNotifOpen(false)}
           onOpenProfile={() => setProfileModalOpen(true)}

@@ -3,6 +3,7 @@ import Icon from "../ui/Icon";
 import { EMPLOYMENT_OPTIONS } from "../../lib/constants";
 
 export default function SurveyFormPanel({ me, onSubmit, surveyHistory = [], submitLabel = "Submit survey" }) {
+  const [visibleHistoryCount, setVisibleHistoryCount] = useState(3);
   const [employed, setEmployed] = useState(EMPLOYMENT_OPTIONS.includes(me.employed) ? me.employed : "Unemployed");
   const [jobTitle, setJobTitle] = useState(me.jobTitle || "");
   const [companyName, setCompanyName] = useState(me.companyName || "");
@@ -75,7 +76,7 @@ export default function SurveyFormPanel({ me, onSubmit, surveyHistory = [], subm
         </p>
       ) : (
         <div className="list-block" style={{ marginTop: 8 }}>
-          {surveyHistory.map((response, index) => (
+          {surveyHistory.slice(0, visibleHistoryCount).map((response, index) => (
             <div className="list-item" key={response.id}>
               <div className="list-item-main">
                 <div className="list-item-title">
@@ -89,10 +90,22 @@ export default function SurveyFormPanel({ me, onSubmit, surveyHistory = [], subm
                 </div>
               </div>
               <div className="chip-row">
-                {response.skills.map((skill) => <span className="chip" key={`${response.id}-${skill}`}>{skill}</span>)}
+                {(response.skills || []).map((skill) => <span className="chip" key={`${response.id}-${skill}`}>{skill}</span>)}
               </div>
             </div>
           ))}
+          {surveyHistory.length > 3 && (
+            <div className="survey-history-actions">
+              {visibleHistoryCount < surveyHistory.length ? (
+                <>
+                  <button type="button" className="survey-history-action" onClick={() => setVisibleHistoryCount((count) => Math.min(count + 3, surveyHistory.length))}>Show more</button>
+                  <button type="button" className="survey-history-action" onClick={() => setVisibleHistoryCount(surveyHistory.length)}>Show all</button>
+                </>
+              ) : (
+                <button type="button" className="survey-history-action" onClick={() => setVisibleHistoryCount(3)}>Show less</button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

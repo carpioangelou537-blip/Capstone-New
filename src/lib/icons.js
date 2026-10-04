@@ -10,6 +10,7 @@ export const ICONS = {
   doc: "M5 2h7l4 4v12H5V2Zm7 1.5V6h2.5L12 3.5ZM7 10h6v1.4H7V10Zm0 3h6v1.4H7V13Z",
   eye: "M10 4C5 4 1.7 8 1 10c.7 2 4 6 9 6s8.3-4 9-6c-.7-2-4-6-9-6Zm0 9.5A3.5 3.5 0 1 1 10 6.5a3.5 3.5 0 0 1 0 7Z",
   arrow: "M4 10h11m0 0-4-4m4 4-4 4",
+  arrowLeft: "M9 3 2 10l7 7v-4h9V7H9V3Z",
   logout: "M9 3H4v14h5v-2H6V5h3V3Zm7 7-4-4v3H8v2h4v3l4-4Z",
   plus: "M9 3h2v6h6v2h-6v6H9v-6H3V9h6V3Z",
   trash: "M7 2h6v2h4v2H3V4h4V2Zm-2 5h10l-1 11H6L5 7Zm3 2v7h1V9H8Zm3 0v7h1V9h-1Z",

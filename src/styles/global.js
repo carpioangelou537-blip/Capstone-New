@@ -375,6 +375,18 @@ html, body, #root, .tracer-root {
 .modal-close:hover { background: rgba(255,255,255,0.18); }
 .modal-sub { font-size: 0.85rem; color: rgba(255,255,255,0.72); margin: 0 0 18px; line-height: 1.5; }
 
+.profile-survey-summary { margin: 4px 0; padding: 14px 0; border-block: 1px solid rgba(255,255,255,0.2); color: var(--white); }
+.profile-survey-heading { margin-bottom: 10px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.68); }
+.profile-survey-status { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; font-size: 0.84rem; }
+.profile-survey-label, .profile-survey-date { color: rgba(255,255,255,0.68); font-size: 0.76rem; }
+.profile-survey-status strong { color: var(--white); }
+.profile-survey-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px 16px; margin-top: 12px; }
+.profile-survey-details > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.profile-survey-details span { color: rgba(255,255,255,0.64); font-size: 0.7rem; }
+.profile-survey-details strong { color: var(--white); font-size: 0.8rem; font-weight: 600; overflow-wrap: anywhere; }
+.profile-survey-details .profile-survey-skills { grid-column: 1 / -1; }
+.profile-survey-empty { margin: 8px 0 0; color: rgba(255,255,255,0.72); font-size: 0.8rem; }
+
 /* ---------------------------------------------------------------- */
 /*  Pending / rejected status pages                                    */
 /* ---------------------------------------------------------------- */
@@ -962,6 +974,11 @@ html, body, #root, .tracer-root {
 .detail-panel button:hover { background: var(--maroon-bright); border-color: var(--maroon-bright); }
 .detail-panel .btn-ghost { background: var(--color-primary); color: var(--white); border-color: var(--color-primary); }
 .detail-panel .btn-ghost:hover { background: var(--maroon-bright); border-color: var(--maroon-bright); }
+.survey-history-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.survey-history-action { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 7px 11px; border: 1px solid rgba(255,255,255,0.3); border-radius: 7px; background: rgba(255,255,255,0.08); color: var(--white); font-size: 0.76rem; font-weight: 600; cursor: pointer; }
+.survey-history-action:hover { background: rgba(255,255,255,0.16); }
+.detail-panel .survey-history-action { border-color: #d8d2d0; background: var(--white); color: var(--maroon-deep); }
+.detail-panel .survey-history-action:hover { background: #faf7f6; border-color: var(--color-primary); }
 .detail-panel .btn-primary { background: var(--color-primary); background-size: auto; }
 .detail-panel .btn-danger { background: var(--color-primary); color: var(--white); }
 .detail-panel .btn-rsvp.going { background: var(--color-primary); border-color: var(--color-primary); color: var(--white); }

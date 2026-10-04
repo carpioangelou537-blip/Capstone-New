@@ -26,6 +26,11 @@ export async function getSessionUser() {
   return data?.user || null;
 }
 
+export async function updateAuthEmail(email) {
+  const { data, error } = await supabase.auth.updateUser({ email });
+  return { user: data?.user || null, error };
+}
+
 export function onAuthChange(callback) {
   const { data } = supabase.auth.onAuthStateChange((_event, session) => {
     callback(session?.user || null);
@@ -50,6 +55,9 @@ const ALUMNUS_COLUMN_MAP = {
   name: "full_name",
   program: "program",
   gradYear: "grad_year",
+  dateOfBirth: "date_of_birth",
+  address: "address",
+  contactNumber: "contact_number",
   employed: "employed",
   jobTitle: "job_title",
   companyName: "company_name",
@@ -82,6 +90,9 @@ function rowToAlumnus(row) {
     name: row.full_name,
     program: row.program,
     gradYear: row.grad_year != null ? String(row.grad_year) : "",
+    dateOfBirth: row.date_of_birth || "",
+    address: row.address || "",
+    contactNumber: row.contact_number || "",
     employed: row.employed || "Unknown",
     jobTitle: row.job_title || "",
     companyName: row.company_name || "",

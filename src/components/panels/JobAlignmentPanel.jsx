@@ -9,7 +9,8 @@ export default function JobAlignmentPanel({ me, jobs, recommendations }) {
     overlap: j.skills.filter((s) => me.skills.some((ms) => ms.toLowerCase() === s.toLowerCase())),
   }));
   const overlapping = scored.filter((j) => j.overlap.length > 0).sort((a, b) => b.overlap.length - a.overlap.length);
-  const pct = scored.length ? Math.round((overlapping.length / scored.length) * 100) : 0;
+  const hasCurrentRole = me.employed === "Employed" || me.employed === "Self Employed";
+  const pct = hasCurrentRole && scored.length ? Math.round((overlapping.length / scored.length) * 100) : 0;
   const related = me.employed === "Employed" ? isJobRelatedToCourse(me.jobTitle) : null;
   const gaps = getSkillGaps(me, jobs);
 
@@ -30,18 +31,18 @@ export default function JobAlignmentPanel({ me, jobs, recommendations }) {
       )}
       {me.employed === "Unemployed" && (
         <p style={{ fontSize: "0.82rem", color: "#8a3b1d", margin: "0 0 12px", lineHeight: 1.5 }}>
-          You're marked as currently <strong>unemployed</strong> — this shows how many open postings you
-          could apply to right now, so it starts from your skills rather than a current role.
+          You're marked as currently <strong>unemployed</strong>, so job alignment is 0% because there is no current role to compare. Skill-matched openings are still listed below.
         </p>
       )}
       <div className="bar-row">
-        <div className="bar-label">Market alignment</div>
+        <div className="bar-label">Job alignment</div>
         <div className="bar-track"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
         <div className="bar-value">{pct}%</div>
       </div>
       <p style={{ fontSize: "0.82rem", color: "#4a4a4a", margin: "10px 0 16px", lineHeight: 1.5 }}>
-        Share of currently open postings whose skills overlap at least one of your reported skills — a
-        100% would mean you could apply to every posting, not that a role matches perfectly.
+        {hasCurrentRole
+          ? "Share of currently open postings whose skills overlap at least one of your reported skills — a 100% means every posting has a skill overlap, not that your current role matches perfectly."
+          : "This score is based on having a current employed or self-employed role. Potential openings that overlap your reported skills are still shown below."}
       </p>
       <div className="list-block">
         {overlapping.length === 0 && <EmptyState icon="brief" text="No overlapping postings right now — your skill set is ahead of current listings." />}
