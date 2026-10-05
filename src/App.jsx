@@ -13,6 +13,8 @@ import SignupPage from "./components/auth/SignupPage";
 import { PendingVerificationPage, RejectedVerificationPage } from "./components/auth/VerificationPages";
 import Dashboard from "./components/dashboard/Dashboard";
 
+const alumnusRowRequests = new Map();
+
 function userDisplayName(u) {
   const meta = u.user_metadata || {};
   return [meta.firstName, meta.lastName].filter(Boolean).join(" ");
@@ -172,13 +174,16 @@ export default function App() {
   async function ensureAlumnusRow(u) {
     const r = u.user_metadata?.role || "alumni";
     if (r === "admin") return;
-    try {
+
+    const pendingRequest = alumnusRowRequests.get(u.id);
+    if (pendingRequest) return pendingRequest;
+
+    const request = (async () => {
       const existing = await api.fetchMyAlumnus(u.id);
       if (existing) {
         if (u.email && existing.email !== u.email) {
-          await api.updateAlumnus(existing.id, { email: u.email })
-            .then(() => setRefresh((k) => k + 1))
-            .catch(() => {});
+          await api.updateAlumnus(existing.id, { email: u.email });
+          setRefresh((k) => k + 1);
         }
         return;
       }
@@ -200,6 +205,9 @@ export default function App() {
         email: u.email || "",
         program: meta.program || PROGRAM_OPTIONS[0],
         gradYear: meta.gradYear ? String(meta.gradYear) : String(CURRENT_YEAR),
+        dateOfBirth: meta.dateOfBirth || "",
+        contactNumber: meta.contactNumber || "",
+        address: meta.address || "",
         employed: "Unknown",
         jobTitle: "",
         companyName: "",
@@ -211,11 +219,16 @@ export default function App() {
         verificationStatus: "pending",
         isSelf: false,
       };
-      await api.insertAlumnus(record).catch(() => {});
+      await api.insertAlumnus(record);
       setRefresh((k) => k + 1);
-    } catch {
-      /* RLS or database offline — demo seed data keeps the app usable */
-    }
+    })().catch((error) => {
+      console.error("Could not create or sync the alumni record.", error);
+      addToast(`Could not save your alumni record: ${error.message || "Supabase request failed."}`);
+    }).finally(() => {
+      if (alumnusRowRequests.get(u.id) === request) alumnusRowRequests.delete(u.id);
+    });
+    alumnusRowRequests.set(u.id, request);
+    return request;
   }
 
   async function handleLogin(email, password) {

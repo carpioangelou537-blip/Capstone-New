@@ -15,6 +15,12 @@ function calculateAge(dateOfBirth) {
   return age >= 0 ? age : null;
 }
 
+function formatDateOfBirth(dateOfBirth) {
+  if (!dateOfBirth) return "Not provided";
+  const [year, month, day] = String(dateOfBirth).split("-");
+  return year && month && day ? `${month}/${day}/${year}` : "Not provided";
+}
+
 export default function AlumniInfoPanel({ alumni, skillsHistory }) {
   const [openId, setOpenId] = useState(null);
   const [searchInput, setSearchInput] = useState("");
@@ -61,11 +67,11 @@ export default function AlumniInfoPanel({ alumni, skillsHistory }) {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "10px 18px", marginBottom: 12 }}>
                 <div>
                   <div className="list-item-sub">Date of Birth</div>
-                  <div>{a.dateOfBirth || "Not provided"}</div>
+                  <div>{formatDateOfBirth(a.dateOfBirth)}</div>
                 </div>
                 <div>
                   <div className="list-item-sub">Age</div>
-                  <div>{calculateAge(a.dateOfBirth) ?? "Not available"}</div>
+                  <div>{calculateAge(a.dateOfBirth) ?? "Not provided"}</div>
                 </div>
                 <div>
                   <div className="list-item-sub">Contact Number</div>

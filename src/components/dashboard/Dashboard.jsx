@@ -235,7 +235,13 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
   return (
     <div className={`dash ${entered ? "in" : ""}`}>
       {surveyModalOpen && role === "alumni" && me && me.verificationStatus === "verified" && !me.surveyCompleted && (
-        <SurveyModal me={safeMe} onSubmit={handleModalSubmit} onClose={() => { setSurveyModalOpen(false); setSurveyDismissed(true); }} />
+        <SurveyModal
+          me={safeMe}
+          email={email}
+          onSubmit={handleModalSubmit}
+          onSavePersonalDetails={actions.updateSelf}
+          onClose={() => { setSurveyModalOpen(false); setSurveyDismissed(true); }}
+        />
       )}
       {profileModalOpen && role === "alumni" && (
         <ProfileModal

@@ -75,7 +75,9 @@ function alumnusToRow(rec) {
   const row = {};
   for (const [appKey, dbKey] of Object.entries(ALUMNUS_COLUMN_MAP)) {
     if (Object.prototype.hasOwnProperty.call(rec, appKey) && rec[appKey] !== undefined) {
-      row[dbKey] = rec[appKey];
+      row[dbKey] = appKey === "dateOfBirth" && rec[appKey] === ""
+        ? null
+        : rec[appKey];
     }
   }
   if (rec.userId !== undefined) {

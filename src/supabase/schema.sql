@@ -238,6 +238,10 @@ create policy "read course_recommendations" on public.course_recommendations for
 create policy "read job_applications"       on public.job_applications       for select using (true);
 create policy "read admin_activity_logs"    on public.admin_activity_logs    for select using (true);
 
+grant select on public.alumni, public.jobs, public.events, public.notifications,
+  public.survey_responses, public.alumni_skills_history, public.course_recommendations,
+  public.job_applications, public.admin_activity_logs to anon, authenticated;
+
 -- Only signed-in users can make changes.
 create policy "signed in insert alumni"                 on public.alumni                 for insert with check (auth.uid() is not null);
 create policy "signed in update alumni"                 on public.alumni                 for update using (auth.uid() is not null);

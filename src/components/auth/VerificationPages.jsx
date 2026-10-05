@@ -5,8 +5,8 @@ export function PendingVerificationPage({ onRefresh, onLogout, autoCheck }) {
     <div className="status-page">
       <div className="status-card">
         <div className="status-icon pending"><Icon name="clock" size={30} /></div>
-        <h2>Your account is pending verification.</h2>
-        <p>An administrator needs to verify your account before you can access the Alumni Survey and other restricted features.</p>
+        <h2>Check Verification Status</h2>
+        <p><strong>Current status: Pending review.</strong> An administrator needs to verify your account before you can access the Alumni Survey and other restricted features.</p>
         <p style={{ fontSize: "0.8rem" }}>
           You're fully signed in — the moment the Alumni Affairs Office approves your account, this page will
           automatically let you into the dashboard and open the alumni survey for you to complete.
@@ -14,7 +14,7 @@ export function PendingVerificationPage({ onRefresh, onLogout, autoCheck }) {
         </p>
         <div className="status-actions">
           <button className="btn-ghost" style={{ color: "var(--maroon-deep)" }} onClick={onRefresh}>
-            <Icon name="arrow" size={14} /> Check verification status
+            <Icon name="arrow" size={14} /> Check status now
           </button>
           <button className="text-link" onClick={onLogout}>Sign out</button>
         </div>

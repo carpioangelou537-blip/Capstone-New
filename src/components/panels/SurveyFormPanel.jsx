@@ -15,7 +15,15 @@ function uniqueSkills(skills) {
   }, []);
 }
 
-export default function SurveyFormPanel({ me, onSubmit, surveyHistory = [], submitLabel = "Submit survey" }) {
+export default function SurveyFormPanel({
+  me,
+  email = "",
+  onSubmit,
+  onSavePersonalDetails,
+  showPersonalDetails = false,
+  surveyHistory = [],
+  submitLabel = "Submit survey",
+}) {
   const [visibleHistoryCount, setVisibleHistoryCount] = useState(3);
   const [employed, setEmployed] = useState(EMPLOYMENT_OPTIONS.includes(me.employed) ? me.employed : "Unemployed");
   const [jobTitle, setJobTitle] = useState(me.jobTitle || "");
@@ -24,10 +32,28 @@ export default function SurveyFormPanel({ me, onSubmit, surveyHistory = [], subm
   const [years, setYears] = useState(me.years || "");
   const [skillsText, setSkillsText] = useState(me.skills.join(", "));
   const [done, setDone] = useState(me.surveyCompleted);
+  const [dateOfBirth, setDateOfBirth] = useState(me.dateOfBirth || "");
+  const [contactNumber, setContactNumber] = useState(me.contactNumber || "");
+  const [address, setAddress] = useState(me.address || "");
+  const age = dateOfBirth ? (() => {
+    const [year, month, day] = dateOfBirth.split("-").map(Number);
+    const today = new Date();
+    return today.getFullYear() - year - (
+      today.getMonth() + 1 < month
+      || (today.getMonth() + 1 === month && today.getDate() < day) ? 1 : 0
+    );
+  })() : null;
 
   function submit(e) {
     e.preventDefault();
     const skills = uniqueSkills(skillsText.split(","));
+    if (showPersonalDetails) {
+      onSavePersonalDetails?.({
+        dateOfBirth,
+        contactNumber: contactNumber.trim(),
+        address: address.trim(),
+      });
+    }
     onSubmit({
       employed,
       jobTitle: employed === "Employed" ? jobTitle.trim() : "",
@@ -42,6 +68,28 @@ export default function SurveyFormPanel({ me, onSubmit, surveyHistory = [], subm
   return (
     <div className="panel-block">
       <form className="panel-form" onSubmit={submit}>
+        {showPersonalDetails && (
+          <>
+            <div className="overview-block-title">Personal details</div>
+            <div className="row">
+              <label>Date of Birth
+                <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} autoComplete="bday" />
+              </label>
+              <label>Contact Number
+                <input type="tel" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} autoComplete="tel" />
+              </label>
+            </div>
+            <label>Login email address
+              <input type="email" value={email} readOnly />
+            </label>
+            <div className="list-item-sub" style={{ marginTop: -8, marginBottom: 8 }}>
+              Age: {age === null ? "Not provided" : age}
+            </div>
+            <label>Address
+              <input value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" />
+            </label>
+          </>
+        )}
         <label>Current employment status
           <select value={employed} onChange={(e) => setEmployed(e.target.value)}>
             {EMPLOYMENT_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
