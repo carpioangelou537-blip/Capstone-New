@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { isEmployedStatus } from "../../lib/utils";
 import Icon from "../ui/Icon";
 import EmptyState from "../ui/EmptyState";
 
 export default function SurveyResultsPanel({ alumni, surveyResponses }) {
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const total = alumni.length;
   const responses = surveyResponses || [];
   const latestByUser = new Map();
@@ -14,6 +17,11 @@ export default function SurveyResultsPanel({ alumni, surveyResponses }) {
   const pct = total ? Math.round((completed / total) * 100) : 0;
   const empPct = total ? Math.round((employed / total) * 100) : 0;
   const nameByUser = new Map(alumni.filter((a) => a.userId).map((a) => [a.userId, a.name]));
+  const filteredResponses = responses.filter((response) =>
+    String(nameByUser.get(response.userId) || "Alumni survey")
+      .toLocaleLowerCase()
+      .includes(searchQuery.trim().toLocaleLowerCase())
+  );
 
   return (
     <div className="panel-block">
@@ -37,9 +45,31 @@ export default function SurveyResultsPanel({ alumni, surveyResponses }) {
         <div className="bar-track"><div className="bar-fill" style={{ width: `${empPct}%` }} /></div>
         <div className="bar-value">{empPct}%</div>
       </div>
+      <form
+        className="panel-search"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setSearchQuery(searchInput);
+        }}
+      >
+        <input
+          type="search"
+          aria-label="Search survey results by alumni name"
+          placeholder="Search survey results by name"
+          value={searchInput}
+          onChange={(event) => {
+            setSearchInput(event.target.value);
+            setSearchQuery(event.target.value);
+          }}
+        />
+        <button type="submit" className="btn-primary">Search</button>
+      </form>
       <div className="list-block" style={{ marginTop: 18 }}>
         {responses.length === 0 && <EmptyState icon="chart" text="No survey responses yet. They'll appear here as alumni submit theirs." />}
-        {responses.map((response) => (
+        {responses.length > 0 && filteredResponses.length === 0 && (
+          <EmptyState icon="chart" text={`No survey results match “${searchQuery}”.`} />
+        )}
+        {filteredResponses.map((response) => (
           <div className="list-item" key={response.id}>
             <div className="list-item-main">
               <div className="list-item-title">{nameByUser.get(response.userId) || "Alumni survey"}</div>

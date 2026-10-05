@@ -12,6 +12,7 @@ export default function EventsAlumniPanel({ events, me, onRsvp }) {
             <div className="list-item-main">
               <div className="list-item-title">{ev.title}</div>
               <div className="list-item-sub">{ev.date} · {ev.rsvps.length} attending</div>
+              {ev.description && <div className="list-item-sub">{ev.description}</div>}
             </div>
             <button className={`btn-rsvp ${going ? "going" : ""}`} onClick={() => onRsvp(ev.id)}>
               <Icon name={going ? "check" : "plus"} size={13} /> {going ? "Going" : "RSVP"}

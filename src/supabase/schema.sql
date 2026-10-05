@@ -87,10 +87,12 @@ alter table public.jobs add column if not exists description text default '';
 create table if not exists public.events (
   id         uuid primary key default gen_random_uuid(),
   title      text not null,
+  description text default '',
   date       date,
   rsvps      jsonb default '[]'::jsonb,
   created_at timestamptz default timezone('utc', now())
 );
+alter table public.events add column if not exists description text default '';
 
 -- ------------------------------- notifications -------------------------
 create table if not exists public.notifications (

@@ -12,6 +12,8 @@ alter table public.alumni
 -- Job description text gives NLP skill extraction useful source material.
 alter table public.jobs
   add column if not exists description text not null default '';
+alter table public.events
+  add column if not exists description text not null default '';
 
 -- The app reads job descriptions from jobs; signed-in users can manage them
 -- under the same policies used by the existing job-posting feature.

@@ -134,13 +134,20 @@ function rowToJob(row) {
 }
 
 function eventToRow(rec) {
-  return { id: rec.id, title: rec.title, date: rec.date, rsvps: rec.rsvps || [] };
+  return {
+    id: rec.id,
+    title: rec.title,
+    description: rec.description || "",
+    date: rec.date,
+    rsvps: rec.rsvps || [],
+  };
 }
 
 function rowToEvent(row) {
   return {
     id: row.id,
     title: row.title,
+    description: row.description || "",
     date: row.date,
     rsvps: Array.isArray(row.rsvps) ? row.rsvps : [],
   };
