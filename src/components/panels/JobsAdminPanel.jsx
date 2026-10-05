@@ -4,14 +4,15 @@ import Icon from "../ui/Icon";
 export default function JobsAdminPanel({ jobs, onAdd, onRemove }) {
   const [title, setTitle] = useState("");
   const [company, setCompany] = useState("");
+  const [description, setDescription] = useState("");
   const [skills, setSkills] = useState("");
   const [link, setLink] = useState("");
 
   function submit(e) {
     e.preventDefault();
     if (!title.trim() || !company.trim()) return;
-    onAdd({ title: title.trim(), company: company.trim(), skills: skills.split(",").map((s) => s.trim()).filter(Boolean), link: link.trim() });
-    setTitle(""); setCompany(""); setSkills(""); setLink("");
+    onAdd({ title: title.trim(), company: company.trim(), description: description.trim(), skills: skills.split(",").map((s) => s.trim()).filter(Boolean), link: link.trim() });
+    setTitle(""); setCompany(""); setDescription(""); setSkills(""); setLink("");
   }
 
   return (
@@ -22,6 +23,7 @@ export default function JobsAdminPanel({ jobs, onAdd, onRemove }) {
           <label>Company<input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Iligan Digital Solutions" /></label>
         </div>
         <label>Skills needed (comma separated)<input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="React, JavaScript" /></label>
+        <label>Job description (used for skill extraction)<textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Describe the role, responsibilities, and required competencies." /></label>
         <label>Posting link (Facebook, LinkedIn, or company page)<input value={link} onChange={(e) => setLink(e.target.value)} type="url" placeholder="https://facebook.com/... or https://linkedin.com/..." /></label>
         <button type="submit" className="btn-ghost" style={{ alignSelf: "flex-start" }}><Icon name="plus" size={14} /> Publish posting</button>
       </form>
@@ -32,6 +34,7 @@ export default function JobsAdminPanel({ jobs, onAdd, onRemove }) {
             <div className="list-item-main">
               <div className="list-item-title">{j.title}</div>
               <div className="list-item-sub">{j.company}</div>
+              {j.description && <div className="list-item-sub">{j.description}</div>}
               <div className="chip-row" style={{ marginTop: 6 }}>{j.skills.map((s) => <span className="chip" key={s}>{s}</span>)}</div>
               {j.link && (
                 <a href={j.link} target="_blank" rel="noopener noreferrer" className="notif-goto" style={{ marginTop: 8, display: "inline-flex" }}>

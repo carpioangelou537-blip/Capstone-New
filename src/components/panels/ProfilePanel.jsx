@@ -65,7 +65,7 @@ export default function ProfilePanel({ me, email, latestSurveyStatus, latestSurv
         <div className="row">
           <label>Date of Birth<input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} /></label>
           <label>Contact Number<input type="tel" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} /></label>
-          <label>Email Address<input type="email" value={emailAddress} onChange={(e) => setEmailAddress(e.target.value)} /></label>
+          <label>Login email address<input type="email" value={emailAddress} onChange={(e) => setEmailAddress(e.target.value)} /></label>
         </div>
         <div className="list-item-sub">Age: {age === null ? "Not provided" : age}</div>
         <label>Address<input value={address} onChange={(e) => setAddress(e.target.value)} /></label>

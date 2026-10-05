@@ -2,6 +2,19 @@ import { useState } from "react";
 import Icon from "../ui/Icon";
 import { EMPLOYMENT_OPTIONS } from "../../lib/constants";
 
+function uniqueSkills(skills) {
+  const seen = new Set();
+  return (skills || []).reduce((unique, skill) => {
+    const value = String(skill).trim();
+    const normalized = value.toLowerCase();
+    if (value && !seen.has(normalized)) {
+      seen.add(normalized);
+      unique.push(value);
+    }
+    return unique;
+  }, []);
+}
+
 export default function SurveyFormPanel({ me, onSubmit, surveyHistory = [], submitLabel = "Submit survey" }) {
   const [visibleHistoryCount, setVisibleHistoryCount] = useState(3);
   const [employed, setEmployed] = useState(EMPLOYMENT_OPTIONS.includes(me.employed) ? me.employed : "Unemployed");
@@ -14,7 +27,7 @@ export default function SurveyFormPanel({ me, onSubmit, surveyHistory = [], subm
 
   function submit(e) {
     e.preventDefault();
-    const skills = skillsText.split(",").map((s) => s.trim()).filter(Boolean);
+    const skills = uniqueSkills(skillsText.split(","));
     onSubmit({
       employed,
       jobTitle: employed === "Employed" ? jobTitle.trim() : "",
@@ -90,7 +103,7 @@ export default function SurveyFormPanel({ me, onSubmit, surveyHistory = [], subm
                 </div>
               </div>
               <div className="chip-row">
-                {(response.skills || []).map((skill) => <span className="chip" key={`${response.id}-${skill}`}>{skill}</span>)}
+                {uniqueSkills(response.skills).map((skill) => <span className="chip" key={`${response.id}-${skill.toLowerCase()}`}>{skill}</span>)}
               </div>
             </div>
           ))}

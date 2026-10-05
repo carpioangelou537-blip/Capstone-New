@@ -24,7 +24,7 @@ export const ADMIN_FEATURES = [
   { icon: "id", title: "View Alumni Information", text: "Browse alumni records — student details, employment history, and self-reported skills — in one monitored view." },
   { icon: "chart", title: "View Survey Results", text: "Review alumni responses to issued surveys to track outcomes, response patterns, and emerging work trends." },
   { icon: "bell", title: "Manage Notifications", text: "Send announcements, reminders, and alerts to alumni to keep engagement and response rates high." },
-  { icon: "spark", title: "View AI Analytics", text: "See AI-generated career-tracking analytics showing which skills and coursework shape alumni outcomes, informing curriculum decisions." },
+  { icon: "spark", title: "View AI Analytics", text: "Review classical machine-learning insights, model evaluation metrics, career clusters, and skill demand." },
   { icon: "brief", title: "Career Tools & Job Postings", text: "Maintain job recommendations and postings shared by partner schools, published for alumni through the Career Tools module." },
   { icon: "calendar", title: "Manage Event Posting", text: "Set up and announce alumni events, then track attendee responses through the Events Response System." },
 ];
@@ -33,8 +33,8 @@ export function getAlumniFeatures() {
   return [
     { icon: "grid", title: "Dashboard", text: "A quick overview of your profile, matches, and updates — jump straight to any module from here." },
     { icon: "doc", title: "Complete the Alumni Survey", text: "Share your employment status and current skill set so it can be matched against the job bank and your field of study." },
-    { icon: "chart", title: "Job Alignment", text: "See how closely your current skills line up with what employers are hiring for right now." },
-    { icon: "brief", title: "Career Tools", text: "Get AI-generated matches between your skills, profile, and open career opportunities." },
+    { icon: "chart", title: "Job Alignment", text: "See TF-IDF job-course alignment, skill gaps, and course competency matches." },
+    { icon: "brief", title: "Career Tools", text: "Explore explainable job matches and career insights powered by classical machine learning." },
     { icon: "calendar", title: "Events & Activities", text: "Browse upcoming alumni events and respond — RSVP, decline, or leave feedback — through the Event Response System." },
   ];
 }

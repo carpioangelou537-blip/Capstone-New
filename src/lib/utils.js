@@ -18,7 +18,10 @@ export function isEmployedStatus(status) {
 export function isJobRelatedToCourse(jobTitle) {
   if (!jobTitle || !jobTitle.trim()) return null;
   const t = jobTitle.toLowerCase();
-  return COURSE_KEYWORDS.some((k) => t.includes(k));
+  return COURSE_KEYWORDS.some((keyword) => {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+    return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`).test(t);
+  });
 }
 
 export function getSkillGaps(me, jobs) {

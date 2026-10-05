@@ -79,16 +79,18 @@ export default function App() {
         setUser(u);
         setRole(u.user_metadata?.role || "alumni");
         setName(userDisplayName(u));
+        ensureAlumnusRow(u);
       } else {
         setUser(null);
       }
     });
-    api.getSessionUser().then((u) => {
+    api.getSessionUser().then(async (u) => {
       if (!active) return;
       if (u) {
         setUser(u);
         setRole(u.user_metadata?.role || "alumni");
         setName(userDisplayName(u));
+        await ensureAlumnusRow(u);
         setPage("splash");
       }
       setAuthChecked(true);
@@ -172,12 +174,19 @@ export default function App() {
     if (r === "admin") return;
     try {
       const existing = await api.fetchMyAlumnus(u.id);
-      if (existing) return;
+      if (existing) {
+        if (u.email && existing.email !== u.email) {
+          await api.updateAlumnus(existing.id, { email: u.email })
+            .then(() => setRefresh((k) => k + 1))
+            .catch(() => {});
+        }
+        return;
+      }
       const displayName = userDisplayName(u);
       if (displayName) {
         const unlinked = await api.findUnlinkedAlumnusByName(displayName);
         if (unlinked) {
-          await api.updateAlumnus(unlinked.id, { userId: u.id });
+          await api.updateAlumnus(unlinked.id, { userId: u.id, email: u.email || "" });
           addToast(`Welcome back, ${displayName} — your account is linked.`);
           setRefresh((k) => k + 1);
           return;
@@ -188,6 +197,7 @@ export default function App() {
         id: uid(),
         userId: u.id,
         name: userDisplayName(u) || "Alumnus",
+        email: u.email || "",
         program: meta.program || PROGRAM_OPTIONS[0],
         gradYear: meta.gradYear ? String(meta.gradYear) : String(CURRENT_YEAR),
         employed: "Unknown",
@@ -277,8 +287,9 @@ export default function App() {
   const actions = {
     updateSelf(patch) {
       const { email, ...profilePatch } = patch;
-      setAlumni((list) => list.map((a) => (a.isSelf || (me && a.userId === me.userId) ? { ...a, ...profilePatch } : a)));
-      if (me) api.updateAlumnus(me.id, profilePatch).catch(() => {});
+      const savedPatch = { ...profilePatch, ...(email === user?.email ? { email } : {}) };
+      setAlumni((list) => list.map((a) => (a.isSelf || (me && a.userId === me.userId) ? { ...a, ...savedPatch } : a)));
+      if (me) api.updateAlumnus(me.id, savedPatch).catch(() => {});
       if (email && email !== user?.email) {
         api.updateAuthEmail(email).then(({ error }) => {
           addToast(error ? "Profile saved, but the email change could not be started." : "Check your inbox to confirm the new email address.");

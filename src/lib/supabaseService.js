@@ -53,6 +53,7 @@ const TABLES = {
 
 const ALUMNUS_COLUMN_MAP = {
   name: "full_name",
+  email: "email",
   program: "program",
   gradYear: "grad_year",
   dateOfBirth: "date_of_birth",
@@ -88,6 +89,7 @@ function rowToAlumnus(row) {
     id: row.id,
     userId: row.user_id,
     name: row.full_name,
+    email: row.email || "",
     program: row.program,
     gradYear: row.grad_year != null ? String(row.grad_year) : "",
     dateOfBirth: row.date_of_birth || "",
@@ -112,6 +114,7 @@ function jobToRow(rec) {
     id: rec.id,
     title: rec.title,
     company: rec.company,
+    description: rec.description || "",
     skills: rec.skills || [],
     link: rec.link || "",
   };
@@ -122,6 +125,7 @@ function rowToJob(row) {
     id: row.id,
     title: row.title,
     company: row.company,
+    description: row.description || "",
     skills: Array.isArray(row.skills) ? row.skills : [],
     link: row.link || "",
   };

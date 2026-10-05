@@ -21,6 +21,9 @@
 --    - `user_id` columns store the Supabase Auth user UUID.
 -- =====================================================================
 
+-- This feature was removed; discard its old table when upgrading.
+drop table if exists public.course_competencies;
+
 -- ------------------------------- helpers -------------------------------
 create or replace function public.set_updated_at()
 returns trigger
@@ -37,6 +40,7 @@ create table if not exists public.alumni (
   id                  uuid primary key default gen_random_uuid(),
   user_id             text,
   full_name           text not null,
+  email               text not null default '',
   program             text not null,
   grad_year           integer,
   date_of_birth       date,
@@ -57,6 +61,7 @@ create table if not exists public.alumni (
 );
 
 alter table public.alumni add column if not exists date_of_birth date;
+alter table public.alumni add column if not exists email text not null default '';
 alter table public.alumni add column if not exists address text default '';
 alter table public.alumni add column if not exists contact_number text default '';
 
@@ -71,10 +76,12 @@ create table if not exists public.jobs (
   id         uuid primary key default gen_random_uuid(),
   title      text not null,
   company    text not null,
+  description text default '',
   skills     jsonb default '[]'::jsonb,
   link       text default '',
   created_at timestamptz default timezone('utc', now())
 );
+alter table public.jobs add column if not exists description text default '';
 
 -- ------------------------------- events --------------------------------
 create table if not exists public.events (
@@ -235,7 +242,6 @@ create policy "read admin_activity_logs"    on public.admin_activity_logs    for
 create policy "signed in insert alumni"                 on public.alumni                 for insert with check (auth.uid() is not null);
 create policy "signed in update alumni"                 on public.alumni                 for update using (auth.uid() is not null);
 create policy "signed in delete alumni"                 on public.alumni                 for delete using (auth.uid() is not null);
-
 create policy "signed in insert jobs"                   on public.jobs                   for insert with check (auth.uid() is not null);
 create policy "signed in update jobs"                   on public.jobs                   for update using (auth.uid() is not null);
 create policy "signed in delete jobs"                   on public.jobs                   for delete using (auth.uid() is not null);

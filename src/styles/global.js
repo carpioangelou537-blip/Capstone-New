@@ -605,6 +605,12 @@ html, body, #root, .tracer-root {
 .dash-role { font-family: var(--font-mono); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.65); margin-top: 2px; }
 
 .dash-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; overflow-y: auto; }
+.dash-back-button {
+  display: flex; align-items: center; gap: 12px; margin: 0 10px 2px; padding: 9px 12px;
+  border: 1px solid rgba(255,255,255,0.22); border-radius: 9px; background: transparent;
+  color: rgba(255,255,255,0.9); font-size: 0.82rem; font-weight: 600; cursor: pointer;
+}
+.dash-back-button:hover { background: rgba(255,255,255,0.1); color: var(--white); }
 .dash-nav-item {
   display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: none; background: transparent;
   color: rgba(255, 255, 255, 0.78); border-radius: 9px; font-size: 0.84rem; font-weight: 500; cursor: pointer;
@@ -1013,6 +1019,8 @@ html, body, #root, .tracer-root {
 @media (max-width: 860px) {
   .dash { grid-template-columns: 1fr; }
   .dash-sidebar { position: sticky; top: 0; z-index: 50; height: auto; min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 16px; }
+  .dash-back-button { margin: 0; padding: 10px; min-width: 42px; justify-content: center; }
+  .dash-back-button span { display: none; }
   .dash-nav { flex-direction: row; flex-wrap: wrap; overflow-y: visible; overflow-x: auto; flex: 1; }
   .dash-nav-item span.nav-label { display: none; }
   .dash-nav-item { padding: 10px; min-width: 42px; justify-content: center; }

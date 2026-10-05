@@ -1,6 +1,20 @@
 import { useState } from "react";
 import { VerifyPill, StatusPill } from "../ui/Pills";
 
+function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return null;
+  const [year, month, day] = String(dateOfBirth).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const today = new Date();
+  const age = today.getFullYear() - year - (
+    today.getMonth() + 1 < month
+    || (today.getMonth() + 1 === month && today.getDate() < day)
+      ? 1
+      : 0
+  );
+  return age >= 0 ? age : null;
+}
+
 export default function AlumniInfoPanel({ alumni, skillsHistory }) {
   const [openId, setOpenId] = useState(null);
   const [searchInput, setSearchInput] = useState("");
@@ -44,6 +58,28 @@ export default function AlumniInfoPanel({ alumni, skillsHistory }) {
           </div>
           {openId === a.id && (
             <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #e6e1df" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "10px 18px", marginBottom: 12 }}>
+                <div>
+                  <div className="list-item-sub">Date of Birth</div>
+                  <div>{a.dateOfBirth || "Not provided"}</div>
+                </div>
+                <div>
+                  <div className="list-item-sub">Age</div>
+                  <div>{calculateAge(a.dateOfBirth) ?? "Not available"}</div>
+                </div>
+                <div>
+                  <div className="list-item-sub">Contact Number</div>
+                  <div>{a.contactNumber || "Not provided"}</div>
+                </div>
+                <div>
+                  <div className="list-item-sub">Email Address</div>
+                  <div>{a.email || "Not available"}</div>
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <div className="list-item-sub">Address</div>
+                  <div>{a.address || "Not provided"}</div>
+                </div>
+              </div>
               {a.employed === "Employed" && (a.jobTitle || a.companyName || a.years) && (
                 <div className="list-item-sub" style={{ marginBottom: 8 }}>
                   {a.jobTitle && <>Current role: {a.jobTitle}</>}
@@ -67,7 +103,8 @@ export default function AlumniInfoPanel({ alumni, skillsHistory }) {
                   <div className="list-item-sub" style={{ marginBottom: 6, marginTop: 12 }}>Skills history (snapshots)</div>
                   {skillsHistory
                     .filter((h) => h.userId && h.userId === a.userId)
-                    .slice(0, 3)
+                    .sort((left, right) => String(right.snapshotDate || "").localeCompare(String(left.snapshotDate || "")))
+                    .slice(0, 1)
                     .map((h) => (
                       <div key={h.id} style={{ marginBottom: 8 }}>
                         <div className="chip-row">

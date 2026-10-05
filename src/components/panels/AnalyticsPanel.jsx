@@ -12,7 +12,9 @@ import {
   CartesianGrid,
 } from "recharts";
 import { isEmployedStatus } from "../../lib/utils";
+import { extractJobSkills, latestSurveyResponses, mergeLatestSurveyResponses } from "../../lib/browserMl";
 import EmptyState from "../ui/EmptyState";
+import MLInsights from "./MLInsights";
 
 const EMPLOYMENT_COLORS = {
   Employed: "#3a0a11",
@@ -47,14 +49,9 @@ function DonutTooltip({ active, payload }) {
 }
 
 export default function AnalyticsPanel({ alumni, jobs, surveyResponses = [] }) {
-  const latestByUser = new Map();
-  surveyResponses.forEach((response) => {
-    if (response.userId && !latestByUser.has(response.userId)) latestByUser.set(response.userId, response);
-  });
-  const currentAlumni = alumni.map((alumnus) => {
-    const latest = latestByUser.get(alumnus.userId);
-    return latest ? { ...alumnus, ...latest, skills: latest.skills } : alumnus;
-  });
+  const latestByUser = latestSurveyResponses(surveyResponses);
+  const verifiedAlumni = alumni.filter((alumnus) => alumnus.verificationStatus === "verified");
+  const currentAlumni = mergeLatestSurveyResponses(verifiedAlumni, surveyResponses);
   const employedCount = currentAlumni.filter((a) => isEmployedStatus(a.employed)).length;
   const selfEmployedCount = currentAlumni.filter((a) => a.employed === "Self Employed").length;
   const unemployedCount = currentAlumni.filter((a) => a.employed === "Unemployed").length;
@@ -68,33 +65,38 @@ export default function AnalyticsPanel({ alumni, jobs, surveyResponses = [] }) {
   ].filter((d) => d.value > 0);
 
   const freq = {};
-  currentAlumni.forEach((a) => a.skills.forEach((skill) => {
-    const key = String(skill).trim().toLowerCase();
+  currentAlumni.forEach((a) => new Set((a.skills || []).map((skill) => String(skill).trim().toLowerCase())).forEach((key) => {
     if (!key) return;
-    if (!freq[key]) freq[key] = { label: String(skill).trim(), count: 0 };
+    if (!freq[key]) {
+      const original = a.skills.find((skill) => String(skill).trim().toLowerCase() === key);
+      freq[key] = { label: String(original).trim(), count: 0 };
+    }
     freq[key].count += 1;
   }));
   const demand = {};
-  jobs.forEach((job) => job.skills.forEach((skill) => {
-    const key = String(skill).trim().toLowerCase();
-    if (key) demand[key] = (demand[key] || 0) + 1;
+  const extractedJobs = extractJobSkills(jobs, currentAlumni);
+  extractedJobs.forEach((job) => new Set(job.skills.map((skill) => skill.toLowerCase())).forEach((key) => {
+    demand[key] = (demand[key] || 0) + 1;
   }));
-  const skillList = Object.keys(freq).sort((a, b) => freq[b].count - freq[a].count).slice(0, 6);
-  const maxFreq = Math.max(1, ...skillList.map((skill) => freq[skill].count));
+  const skillList = [...new Set([...Object.keys(freq), ...Object.keys(demand)])]
+    .sort((a, b) => (demand[b] || 0) - (demand[a] || 0) || (freq[b]?.count || 0) - (freq[a]?.count || 0))
+    .slice(0, 6);
+  const maxFreq = Math.max(1, ...skillList.map((skill) => freq[skill]?.count || 0));
 
   const skillsData = skillList.map((s) => ({
-    skill: freq[s].label,
-    alumni: freq[s].count,
+    skill: freq[s]?.label || extractedJobs.flatMap((job) => job.skills).find((skill) => skill.toLowerCase() === s) || s,
+    alumni: freq[s]?.count || 0,
     demand: demand[s] || 0,
-    pct: Math.round((freq[s].count / maxFreq) * 100),
+    pct: Math.round(((freq[s]?.count || 0) / maxFreq) * 100),
   }));
 
-  const total = alumni.length;
-  const completed = currentAlumni.filter((a) => a.surveyCompleted || latestByUser.has(a.userId)).length;
+  const total = verifiedAlumni.length;
+  const completed = verifiedAlumni.filter((a) => a.surveyCompleted || latestByUser.has(a.userId)).length;
   const completionPct = total ? Math.round((completed / total) * 100) : 0;
 
   return (
     <div className="panel-block">
+      <MLInsights alumni={alumni} jobs={jobs} surveyResponses={surveyResponses} />
       <div className="overview-block-title" style={{ marginTop: 4 }}>
         Employment distribution
       </div>
@@ -184,9 +186,9 @@ export default function AnalyticsPanel({ alumni, jobs, surveyResponses = [] }) {
 
       <div className="overview-block-title">How to read this</div>
       <p style={{ fontSize: "0.82rem", color: "#4a4a4a", lineHeight: 1.6, marginTop: 4 }}>
-        The donut shows the employment status of every registered alumni. The bar chart compares the most
-        commonly reported alumni skills against the skills actually requested in open partner postings —
-        gaps here are curriculum opportunities for the AAO.
+        Employment distribution and survey response rate include verified alumni only. The bar chart
+        counts each distinct extracted job skill once per posting and each distinct reported skill once
+        per verified alumnus; unverified accounts do not affect these outcome analytics.
       </p>
     </div>
   );

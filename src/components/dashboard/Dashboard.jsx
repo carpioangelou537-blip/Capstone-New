@@ -28,7 +28,6 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
     notifications,
     surveyResponses,
     skillsHistory,
-    courseRecommendations,
     jobApplications,
     actions,
   } = domain;
@@ -185,7 +184,6 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
     return null;
   }
 
-  const myRecommendations = courseRecommendations.filter((r) => r.userId && r.userId === safeMe.userId);
   const myApplications = jobApplications.filter((a) => a.userId && a.userId === safeMe.userId);
   const mySurveyHistory = surveyResponses
     .filter((response) => response.userId && response.userId === safeMe.userId)
@@ -222,9 +220,9 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
       case "Complete the Alumni Survey":
         return <SurveyFormPanel me={safeMe} onSubmit={handleSurveySubmit} surveyHistory={mySurveyHistory} />;
       case "Job Alignment":
-        return <JobAlignmentPanel me={safeMe} jobs={jobs} recommendations={myRecommendations} />;
+        return <JobAlignmentPanel me={safeMe} jobs={jobs} alumni={alumni} surveyResponses={surveyResponses} />;
       case "Career Tools":
-        return <CareerToolsPanel me={safeMe} jobs={jobs} onApply={actions.applyJob} jobApplications={myApplications} />;
+        return <CareerToolsPanel me={safeMe} jobs={jobs} alumni={alumni} surveyResponses={surveyResponses} onApply={actions.applyJob} jobApplications={myApplications} />;
       case "Events & Activities":
         return <EventsAlumniPanel events={events} me={safeMe} onRsvp={actions.rsvpEvent} />;
       default:
@@ -257,6 +255,8 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
         active={active}
         onSelect={goToFeature}
         getBadge={getBadge}
+        canGoBack={navigationHistory.length > 0}
+        onBack={goBack}
         onLogout={onLogout}
       />
 
@@ -269,8 +269,6 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
           notifOpen={notifOpen}
           onToggleNotif={toggleNotifications}
           unreadCount={unreadNotificationCount}
-          canGoBack={navigationHistory.length > 0}
-          onBack={goBack}
           onGoto={goToFeature}
           onCloseNotif={() => setNotifOpen(false)}
           onOpenProfile={() => setProfileModalOpen(true)}

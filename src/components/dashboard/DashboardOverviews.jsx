@@ -1,5 +1,6 @@
 import Icon from "../ui/Icon";
 import EmptyState from "../ui/EmptyState";
+import { getDigitalSkillAlignment, getJobMatchMetrics } from "../../lib/browserMl";
 
 export function AdminDashboardOverview({ alumni, jobs, events, notifications, onNavigate }) {
   const pendingVerifications = alumni.filter((a) => a.verificationStatus === "pending").length;
@@ -42,12 +43,9 @@ export function AdminDashboardOverview({ alumni, jobs, events, notifications, on
 }
 
 export function AlumniDashboardOverview({ me, jobs, events, notifications, onNavigate }) {
-  const matchedJobs = jobs.filter((j) => j.skills.some((s) => me.skills.some((ms) => ms.toLowerCase() === s.toLowerCase()))).length;
-  const demandedSkills = [...new Set(jobs.flatMap((job) => job.skills.map((skill) => skill.toLowerCase())))];
-  const matchedSkills = demandedSkills.filter((skill) => me.skills.some((item) => item.toLowerCase() === skill));
-  const alignmentPct = (me.employed === "Employed" || me.employed === "Self Employed") && demandedSkills.length
-    ? Math.round((matchedSkills.length / demandedSkills.length) * 100)
-    : 0;
+  const matchMetrics = getJobMatchMetrics(me, jobs);
+  const skillAlignment = getDigitalSkillAlignment(me);
+  const matchedJobs = matchMetrics.matchedJobCount;
   const updates = [
     ...notifications.map((n) => ({ id: n.id, text: n.text, date: n.date, target: n.target })),
     ...events.map((e) => ({ id: `ev-${e.id}`, text: `Upcoming: ${e.title}`, date: e.date, target: "Events & Activities" })),
@@ -96,15 +94,17 @@ export function AlumniDashboardOverview({ me, jobs, events, notifications, onNav
         </button>
       </div>
 
-      <div className="overview-block-title">Alignment analytics</div>
+      <div className="overview-block-title">Skill alignment</div>
       <div className="bar-row">
-        <div className="bar-label">Skill alignment</div>
-        <div className="bar-track"><div className="bar-fill" style={{ width: `${alignmentPct}%` }} /></div>
-        <div className="bar-value">{alignmentPct}%</div>
+        <div className="bar-label">IT/CS skills</div>
+        <div className="bar-track"><div className="bar-fill" style={{ width: `${skillAlignment.score}%` }} /></div>
+        <div className="bar-value">{skillAlignment.score}%</div>
       </div>
-      <button type="button" className="notif-goto" onClick={() => onNavigate("Job Alignment")}>
-        See full breakdown <Icon name="arrow" size={12} />
-      </button>
+      <div className="overview-link-sub" style={{ margin: "6px 0 10px" }}>
+        {skillAlignment.totalSkills
+          ? `${skillAlignment.matchedSkills.length} recognized IT/CS-related skill${skillAlignment.matchedSkills.length === 1 ? "" : "s"} among ${skillAlignment.totalSkills} listed. IT/CS-related jobs receive full skill credit; other employed roles receive half credit.`
+          : "Add skills such as React or SQL to your profile to see your IT/CS skill alignment."}
+      </div>
     </div>
   );
 }

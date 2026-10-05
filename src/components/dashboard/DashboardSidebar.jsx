@@ -9,6 +9,8 @@ export default function DashboardSidebar({
   onSelect,
   getBadge,
   surveyLocked,
+  canGoBack = false,
+  onBack,
   onLogout,
 }) {
   return (
@@ -26,6 +28,13 @@ export default function DashboardSidebar({
           <p className="dash-role">{role === "admin" ? "Administrator" : "Alumnus"}</p>
         </div>
       </div>
+
+      {canGoBack && (
+        <button type="button" className="dash-back-button" onClick={onBack}>
+          <Icon name="arrowLeft" size={16} />
+          <span>Back</span>
+        </button>
+      )}
 
       <nav className="dash-nav">
         {features.map((f, i) => {
