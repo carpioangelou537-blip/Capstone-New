@@ -4,27 +4,27 @@ const slides = [
   {
     src: "/Landingimages-videos/alumni-image1.jpg",
     alt: "SPC CCS alumni gathered for a banquet",
-    caption: "SPC CCS alumni reconnect over a shared meal.",
+    caption: "A shared meal brings SPC CCS alumni together to reconnect, catch up, and celebrate the community they built during college.",
   },
   {
     src: "/Landingimages-videos/alumni-image2.jpg",
     alt: "Alumni and guests gathered at an SPC CCS event",
-    caption: "Alumni and guests come together for an SPC CCS celebration.",
+    caption: "Alumni and guests gather for a special occasion, sharing conversation and making new memories with the SPC CCS community.",
   },
   {
     src: "/Landingimages-videos/alumni-image3.jpg",
     alt: "Alumni posing together at a college event",
-    caption: "A group photo capturing the spirit of the SPC CCS community.",
+    caption: "A group photo captures alumni and friends coming together, a reminder that college connections continue well beyond graduation.",
   },
   {
     src: "/Landingimages-videos/alumni-image4.jpg",
     alt: "SPC CCS alumni posing together",
-    caption: "Alumni share a moment together during the celebration.",
+    caption: "Smiles and shared stories reflect the friendships that continue to connect SPC CCS alumni after they leave campus.",
   },
   {
     src: "/Landingimages-videos/alumni-image5.jpg",
     alt: "Three alumni friends at a banquet",
-    caption: "Friends and fellow alumni reconnect at an SPC CCS gathering.",
+    caption: "Old friends reconnect and celebrate their journeys, showing the lasting bonds formed through the SPC CCS community.",
   },
 ];
 

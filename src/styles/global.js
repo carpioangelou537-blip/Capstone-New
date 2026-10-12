@@ -495,8 +495,8 @@ html, body, #root, .tracer-root {
   color: var(--color-muted); font-size: 0.84rem; line-height: 1.6;
 }
 .landing-slideshow { padding: 0; }
-.landing-slide { position: relative; overflow: hidden; background: var(--near-black); border-radius: 10px; }
-.landing-slide img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; }
+.landing-slide { position: relative; overflow: hidden; margin: 0; background: var(--near-black); }
+.landing-slide img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
 .landing-slide-count {
   position: absolute; top: 10px; right: 10px; padding: 5px 9px; border-radius: 999px;
   background: rgba(11,10,10,0.72); color: var(--white); font-family: var(--font-mono); font-size: 0.68rem;
