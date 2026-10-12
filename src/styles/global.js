@@ -452,8 +452,8 @@ html, body, #root, .tracer-root {
 /* Hero */
 .hero {
   position: relative; overflow: hidden;
-  background: linear-gradient(175deg, var(--color-primary) 0%, var(--maroon-deep) 78%, var(--black) 140%);
-  background-size: 160% 160%; animation: bgShift 22s ease-in-out infinite;
+  background-image: linear-gradient(90deg, rgba(26, 8, 12, 0.88), rgba(26, 8, 12, 0.56)), url("/Landingimages-videos/alumni-hero.png");
+  background-position: center; background-size: cover;
   color: var(--white);
 }
 .hero-inner {
@@ -479,6 +479,39 @@ html, body, #root, .tracer-root {
 .hero-mock-stat { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; }
 .hero-mock-stat b { display: block; font-family: var(--font-mono); font-size: 1.15rem; color: var(--gold); }
 .hero-mock-stat span { font-size: 0.68rem; color: rgba(255,255,255,0.55); }
+
+/* Alumni media */
+.landing-media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.landing-media-card {
+  min-width: 0; overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius); box-shadow: 0 20px 40px -32px rgba(0,0,0,0.3);
+}
+.landing-media-heading { padding: 20px 20px 14px; }
+.landing-media-heading h3 { font-family: var(--font-display); font-size: 1.15rem; margin-bottom: 5px; }
+.landing-media-heading p { color: var(--color-muted); font-size: 0.84rem; }
+.landing-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--near-black); object-fit: contain; }
+.landing-slideshow { padding: 0 16px 16px; }
+.landing-slide { position: relative; overflow: hidden; background: var(--near-black); border-radius: 10px; }
+.landing-slide img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.landing-slide-count {
+  position: absolute; right: 10px; bottom: 10px; padding: 5px 9px; border-radius: 999px;
+  background: rgba(11,10,10,0.72); color: var(--white); font-family: var(--font-mono); font-size: 0.68rem;
+}
+.landing-slideshow-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.landing-slide-arrow, .landing-slideshow-toggle {
+  border: 1px solid var(--color-border); border-radius: 999px; background: var(--white); color: var(--color-primary);
+  font: inherit; font-weight: 700; cursor: pointer; transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+.landing-slide-arrow { padding: 7px 12px; font-size: 0.76rem; }
+.landing-slide-arrow:hover, .landing-slideshow-toggle:hover { background: var(--color-primary); color: var(--white); }
+.landing-slide-dots { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.landing-slide-dot { width: 9px; height: 9px; padding: 0; border: 0; border-radius: 50%; background: rgba(92,15,26,0.25); cursor: pointer; }
+.landing-slide-dot.active { background: var(--color-primary); transform: scale(1.2); }
+.landing-slide-arrow:focus-visible, .landing-slideshow-toggle:focus-visible, .landing-slide-dot:focus-visible {
+  outline: 2px solid var(--color-primary); outline-offset: 3px;
+}
+.landing-slideshow-toggle { display: block; margin: 10px auto 0; padding: 6px 12px; font-size: 0.74rem; }
+
 /* About */
 .about-section { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 6vw, 56px); align-items: center; }
 .about-copy { animation: fadeUp 0.6s var(--ease) both; }
@@ -564,6 +597,7 @@ html, body, #root, .tracer-root {
 @media (max-width: 860px) {
   .hero-inner { grid-template-columns: 1fr; }
   .about-section { grid-template-columns: 1fr; }
+  .landing-media-grid { grid-template-columns: 1fr; }
   .lp-footer-grid { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 520px) {

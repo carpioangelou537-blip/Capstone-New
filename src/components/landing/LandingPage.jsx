@@ -1,5 +1,6 @@
 import BrandLogo from "../ui/BrandLogo";
 import LandingHero from "./LandingHero";
+import LandingMedia from "./LandingMedia";
 import LandingAbout from "./LandingAbout";
 import LandingFeatures from "./LandingFeatures";
 import LandingSteps from "./LandingSteps";
@@ -28,6 +29,7 @@ export default function LandingPage({ alumni, onGetStarted, onLogin }) {
 
       <LandingHero onGetStarted={onGetStarted} onLogin={onLogin} />
       <LandingAbout />
+      <LandingMedia />
       <LandingFeatures />
       <LandingSteps />
       <LandingStats alumni={alumni} />

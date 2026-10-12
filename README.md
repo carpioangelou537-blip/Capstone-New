@@ -86,6 +86,15 @@ the API is not running.
 These models and scores describe the available profile and posting data; they
 do not guarantee a particular career or hiring outcome.
 
+### Landing page media and sharing
+
+- The landing page uses `public/Landingimages-videos/alumni-hero.png` as its
+  hero background and social-sharing preview image.
+- The alumni media section plays `alumni-video.mp4` and cycles through
+  `alumni-image1.jpg` to `alumni-image5.jpg`.
+- Facebook and other link-preview crawlers use the absolute
+  `alumni-hero.png` URL in the Open Graph and Twitter metadata in `index.html`.
+
 ## Run the app
 
 1. Install Node.js supported by `package.json` and install dependencies:
