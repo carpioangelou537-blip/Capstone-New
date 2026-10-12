@@ -1,11 +1,31 @@
 import { useEffect, useState } from "react";
 
 const slides = [
-  { src: "/Landingimages-videos/alumni-image1.jpg", alt: "Alumni community gathering" },
-  { src: "/Landingimages-videos/alumni-image2.jpg", alt: "Alumni sharing a moment together" },
-  { src: "/Landingimages-videos/alumni-image3.jpg", alt: "Alumni event" },
-  { src: "/Landingimages-videos/alumni-image4.jpg", alt: "Alumni community event" },
-  { src: "/Landingimages-videos/alumni-image5.jpg", alt: "Alumni celebrating together" },
+  {
+    src: "/Landingimages-videos/alumni-image1.jpg",
+    alt: "SPC CCS alumni gathered for a banquet",
+    caption: "SPC CCS alumni reconnect over a shared meal.",
+  },
+  {
+    src: "/Landingimages-videos/alumni-image2.jpg",
+    alt: "Alumni and guests gathered at an SPC CCS event",
+    caption: "Alumni and guests come together for an SPC CCS celebration.",
+  },
+  {
+    src: "/Landingimages-videos/alumni-image3.jpg",
+    alt: "Alumni posing together at a college event",
+    caption: "A group photo capturing the spirit of the SPC CCS community.",
+  },
+  {
+    src: "/Landingimages-videos/alumni-image4.jpg",
+    alt: "SPC CCS alumni posing together",
+    caption: "Alumni share a moment together during the celebration.",
+  },
+  {
+    src: "/Landingimages-videos/alumni-image5.jpg",
+    alt: "Three alumni friends at a banquet",
+    caption: "Friends and fellow alumni reconnect at an SPC CCS gathering.",
+  },
 ];
 
 export default function LandingMedia() {
@@ -27,46 +47,24 @@ export default function LandingMedia() {
   };
 
   return (
-    <section className="lp-section landing-media-section" aria-labelledby="landing-media-title">
-      <div className="lp-head">
-        <span className="lp-eyebrow">Life after SPC</span>
-        <h2 id="landing-media-title">Stories from our alumni community.</h2>
-        <p>Take a look at the people and moments that keep our alumni connected.</p>
-      </div>
-
-      <div className="landing-media-grid">
-        <article className="landing-media-card landing-video-card">
-          <div className="landing-media-heading">
-            <h3>Meet the alumni community</h3>
-            <p>Watch a short look at our alumni community.</p>
+    <>
+      <section className="lp-section landing-media-section landing-slideshow-section" aria-labelledby="landing-slideshow-title">
+        <div className="landing-media-copy">
+          <div className="lp-head">
+            <span className="lp-eyebrow">Alumni photo gallery</span>
+            <h2 id="landing-slideshow-title">Moments from the SPC CCS community.</h2>
+            <p>Browse five snapshots of alumni reconnecting and celebrating together.</p>
           </div>
-          <video
-            className="landing-video"
-            controls
-            preload="metadata"
-            playsInline
-            poster="/Landingimages-videos/alumni-image1.jpg"
-            aria-label="Alumni community video"
-          >
-            <source src="/Landingimages-videos/alumni-video.mp4" type="video/mp4" />
-            Your browser does not support the video element.
-          </video>
-        </article>
-
-        <article className="landing-media-card landing-slideshow-card">
-          <div className="landing-media-heading">
-            <h3>Moments together</h3>
-            <p>Five snapshots from the SPC alumni community.</p>
-          </div>
+          <p className="landing-media-caption" aria-live="polite">
+            {slides[activeSlide].caption}
+          </p>
+        </div>
+        <div className="landing-media-frame">
           <div className="landing-slideshow" aria-roledescription="carousel" aria-label="Alumni photo slideshow">
-            <div className="landing-slide" aria-live="polite">
-              <img
-                src={slides[activeSlide].src}
-                alt={slides[activeSlide].alt}
-                loading="lazy"
-              />
+            <figure className="landing-slide" aria-live="polite">
+              <img src={slides[activeSlide].src} alt={slides[activeSlide].alt} loading="lazy" />
               <span className="landing-slide-count">{activeSlide + 1} / {slides.length}</span>
-            </div>
+            </figure>
             <div className="landing-slideshow-controls">
               <button
                 type="button"
@@ -106,8 +104,36 @@ export default function LandingMedia() {
               {isPlaying ? "Pause slideshow" : "Play slideshow"}
             </button>
           </div>
-        </article>
-      </div>
-    </section>
+        </div>
+      </section>
+
+      <section className="lp-section landing-media-section landing-video-section" aria-labelledby="landing-video-title">
+        <div className="landing-media-copy">
+          <div className="lp-head">
+            <span className="lp-eyebrow">Alumni video</span>
+            <h2 id="landing-video-title">A closer look at our alumni community.</h2>
+            <p>Watch a short feature celebrating the connections that continue beyond graduation.</p>
+          </div>
+          <p className="landing-media-caption">
+            SPC CCS alumni come together to celebrate their shared experiences and lasting connections.
+          </p>
+        </div>
+        <div className="landing-media-frame">
+          <video
+            className="landing-video"
+            controls
+            autoPlay
+            muted
+            loop
+            preload="auto"
+            playsInline
+            aria-label="Alumni community video"
+          >
+            <source src="/Landingimages-videos/alumni-video.mp4" type="video/mp4" />
+            Your browser does not support the video element.
+          </video>
+        </div>
+      </section>
+    </>
   );
 }

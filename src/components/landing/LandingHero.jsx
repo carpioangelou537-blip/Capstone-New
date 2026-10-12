@@ -17,16 +17,11 @@ export default function LandingHero({ onGetStarted, onLogin }) {
           </div>
         </div>
         <div className="hero-visual">
-          <div className="hero-mock">
-            <div className="hero-mock-head">
-              <span className="hero-mock-title">Alignment Snapshot</span>
-              <Icon name="spark" size={16} />
-            </div>
-            <div className="hero-mock-stats">
-              <div className="hero-mock-stat"><b>82%</b><span>Skill match rate</span></div>
-              <div className="hero-mock-stat"><b>+3</b><span>Trending skills</span></div>
-            </div>
-          </div>
+          <img
+            className="hero-artwork"
+            src="/Landingimages-videos/alumni-hero.png"
+            alt="St. Peter's College alumni tracer and graduates"
+          />
         </div>
       </div>
     </section>
