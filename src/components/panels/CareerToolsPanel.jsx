@@ -1,9 +1,16 @@
+import { useState } from "react";
 import EmptyState from "../ui/EmptyState";
 import Icon from "../ui/Icon";
 import MLInsights from "./MLInsights";
 
 export default function CareerToolsPanel({ me, jobs, alumni, surveyResponses, onApply, jobApplications }) {
+  const [searchQuery, setSearchQuery] = useState("");
   const appliedJobIds = (jobApplications || []).map((application) => String(application.jobId));
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const filteredJobs = jobs.filter((job) =>
+    [job.title, job.company, job.description, ...(job.skills || [])]
+      .some((value) => String(value || "").toLocaleLowerCase().includes(normalizedQuery))
+  );
 
   return (
     <div className="panel-block">
@@ -14,8 +21,20 @@ export default function CareerToolsPanel({ me, jobs, alumni, surveyResponses, on
           <p className="list-item-sub" style={{ margin: "0 0 10px", lineHeight: 1.5 }}>
             Listings link to LinkedIn or Facebook searches and may change over time. Confirm each role’s details with the original poster.
           </p>
+          <form className="panel-search" role="search" onSubmit={(event) => event.preventDefault()}>
+            <input
+              type="search"
+              aria-label="Search job listings by title, source, or skill"
+              placeholder="Search jobs by title, source, or skill"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </form>
+          <div className="list-item-sub" style={{ marginBottom: 8 }}>
+            Showing {filteredJobs.length} of {jobs.length} listings
+          </div>
           <div className="list-block">
-            {jobs.map((job) => (
+            {filteredJobs.map((job) => (
               <div className="list-item" key={job.id}>
                 <div className="list-item-main">
                   <div className="list-item-title">{job.title}</div>
@@ -34,6 +53,7 @@ export default function CareerToolsPanel({ me, jobs, alumni, surveyResponses, on
               </div>
             ))}
           </div>
+          {filteredJobs.length === 0 && <EmptyState icon="brief" text="No job listings match your search. Try another title, source, or skill." />}
         </section>
       )}
       <MLInsights
