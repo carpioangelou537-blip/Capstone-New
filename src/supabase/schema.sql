@@ -342,3 +342,57 @@ begin
       ('', 'published_job',       'Junior Web Developer at Iligan Digital Solutions');
   end if;
 end $$;
+
+-- Curated LinkedIn and Facebook listings are added even when this schema is
+-- applied to an existing database. The link check makes reruns idempotent.
+insert into public.jobs (title, company, skills, link)
+select curated.title, curated.company, curated.skills::jsonb, curated.link
+from (values
+  ('Software Engineer', 'Robinsons Land Corporation', '["Java","Python","SQL","debugging"]', 'https://ph.linkedin.com/jobs/view/software-engineer-at-robinsons-land-corporation-4381568711'),
+  ('IT QA Analyst', 'Robinsons Land Corporation', '["Software testing","bug reporting","documentation"]', 'https://ph.linkedin.com/jobs/view/it-qa-analyst-at-robinsons-land-corporation-4279868022'),
+  ('IT Support Engineer', 'LinkedIn', '["Windows","troubleshooting","networking"]', 'https://www.linkedin.com/jobs/search/?keywords=IT%20Support%20Engineer&location=Iligan%20City%2C%20Philippines'),
+  ('Technical Support Engineer', 'LinkedIn', '["Hardware","software","customer support"]', 'https://www.linkedin.com/jobs/search/?keywords=Technical%20Support%20Engineer&location=Iligan%20City%2C%20Philippines'),
+  ('Web Developer', 'LinkedIn', '["HTML","CSS","JavaScript"]', 'https://www.linkedin.com/jobs/search/?keywords=Web%20Developer&location=Iligan%20City%2C%20Philippines'),
+  ('Frontend Developer', 'LinkedIn', '["React","JavaScript","responsive design"]', 'https://www.linkedin.com/jobs/search/?keywords=Frontend%20Developer&location=Iligan%20City%2C%20Philippines'),
+  ('Backend Developer', 'LinkedIn', '["Node.js","SQL","APIs"]', 'https://www.linkedin.com/jobs/search/?keywords=Backend%20Developer&location=Iligan%20City%2C%20Philippines'),
+  ('Full-Stack Developer', 'LinkedIn', '["React","backend programming","databases"]', 'https://www.linkedin.com/jobs/search/?keywords=Full%20Stack%20Developer&location=Iligan%20City%2C%20Philippines'),
+  ('Junior Software Developer', 'LinkedIn', '["Programming","Git","debugging"]', 'https://www.linkedin.com/jobs/search/?keywords=Junior%20Software%20Developer&location=Iligan%20City%2C%20Philippines'),
+  ('Database Administrator', 'LinkedIn', '["SQL","backups","database security"]', 'https://www.linkedin.com/jobs/search/?keywords=Database%20Administrator&location=Iligan%20City%2C%20Philippines'),
+  ('Network Technician', 'LinkedIn', '["TCP/IP","routers","switches"]', 'https://www.linkedin.com/jobs/search/?keywords=Network%20Technician&location=Iligan%20City%2C%20Philippines'),
+  ('System Administrator', 'LinkedIn', '["Windows/Linux","servers","security"]', 'https://www.linkedin.com/jobs/search/?keywords=System%20Administrator&location=Iligan%20City%2C%20Philippines'),
+  ('Cybersecurity Analyst', 'LinkedIn', '["Network security","threat monitoring"]', 'https://www.linkedin.com/jobs/search/?keywords=Cybersecurity%20Analyst&location=Iligan%20City%2C%20Philippines'),
+  ('Software Tester', 'LinkedIn', '["QA","test cases","bug reporting"]', 'https://www.linkedin.com/jobs/search/?keywords=Software%20Tester&location=Iligan%20City%2C%20Philippines'),
+  ('UI/UX Designer', 'LinkedIn', '["Figma","wireframes","prototyping"]', 'https://www.linkedin.com/jobs/search/?keywords=UI%20UX%20Designer&location=Iligan%20City%2C%20Philippines'),
+  ('IT Help Desk Technician', 'LinkedIn', '["Troubleshooting","ticketing","Windows"]', 'https://www.linkedin.com/jobs/search/?keywords=IT%20Help%20Desk&location=Iligan%20City%2C%20Philippines'),
+  ('IT Project Assistant', 'LinkedIn', '["Documentation","Excel","coordination"]', 'https://www.linkedin.com/jobs/search/?keywords=IT%20Project%20Assistant&location=Iligan%20City%2C%20Philippines'),
+  ('Data Analyst', 'LinkedIn', '["Excel","SQL","Power BI"]', 'https://www.linkedin.com/jobs/search/?keywords=Data%20Analyst&location=Iligan%20City%2C%20Philippines'),
+  ('WordPress Developer', 'LinkedIn', '["WordPress","PHP","HTML","CSS"]', 'https://www.linkedin.com/jobs/search/?keywords=WordPress%20Developer&location=Iligan%20City%2C%20Philippines'),
+  ('Process Developer', '1000 Miles Limited', '["Workflow automation","Odoo ERP","Power Automate"]', 'https://ph.linkedin.com/jobs/view/process-developer-at-1000-miles-limited-4184575937'),
+  ('IT Staff', 'Facebook', '["Computer troubleshooting","MS Office"]', 'https://www.facebook.com/search/posts/?q=IT%20Staff%20Hiring%20Iligan%20City'),
+  ('Computer Technician', 'Facebook', '["PC repair","Windows installation"]', 'https://www.facebook.com/search/posts/?q=Computer%20Technician%20Hiring%20Iligan'),
+  ('Web Developer', 'Facebook', '["HTML","CSS","JavaScript"]', 'https://www.facebook.com/search/posts/?q=Web%20Developer%20Hiring%20Iligan%20City'),
+  ('Frontend Developer', 'Facebook', '["React","CSS","responsive design"]', 'https://www.facebook.com/search/posts/?q=Frontend%20Developer%20Hiring%20Iligan'),
+  ('Backend Developer', 'Facebook', '["Node.js","PHP","SQL"]', 'https://www.facebook.com/search/posts/?q=Backend%20Developer%20Hiring%20Iligan'),
+  ('Full-Stack Developer', 'Facebook', '["Frontend","backend","databases"]', 'https://www.facebook.com/search/posts/?q=Full%20Stack%20Developer%20Hiring%20Iligan'),
+  ('IT Support Technician', 'Facebook', '["Troubleshooting","networking"]', 'https://www.facebook.com/search/posts/?q=IT%20Support%20Technician%20Hiring%20Iligan'),
+  ('Technical Support Representative', 'Facebook', '["Troubleshooting","communication"]', 'https://www.facebook.com/search/posts/?q=Technical%20Support%20Hiring%20Iligan%20City'),
+  ('Network Technician', 'Facebook', '["TCP/IP","LAN","routers"]', 'https://www.facebook.com/search/posts/?q=Network%20Technician%20Hiring%20Iligan'),
+  ('IT Help Desk Staff', 'Facebook', '["Ticketing","user support"]', 'https://www.facebook.com/search/posts/?q=IT%20Help%20Desk%20Hiring%20Iligan'),
+  ('UI/UX Designer', 'Facebook', '["Figma","wireframes","prototypes"]', 'https://www.facebook.com/search/posts/?q=UI%20UX%20Designer%20Hiring%20Iligan'),
+  ('Graphic Designer', 'Facebook', '["Canva","Photoshop","Illustrator"]', 'https://www.facebook.com/search/posts/?q=Graphic%20Designer%20Hiring%20Iligan'),
+  ('WordPress Developer', 'Facebook', '["WordPress","PHP","CSS"]', 'https://www.facebook.com/search/posts/?q=WordPress%20Developer%20Hiring%20Iligan'),
+  ('Software Developer', 'Facebook', '["Java","Python","SQL"]', 'https://www.facebook.com/search/posts/?q=Software%20Developer%20Hiring%20Iligan%20City'),
+  ('Junior Programmer', 'Facebook', '["Programming","debugging"]', 'https://www.facebook.com/search/posts/?q=Junior%20Programmer%20Hiring%20Iligan'),
+  ('Database Assistant', 'Facebook', '["SQL","Excel","data management"]', 'https://www.facebook.com/search/posts/?q=Database%20Assistant%20Hiring%20Iligan'),
+  ('IT QA Tester', 'Facebook', '["Testing","test cases","bug reports"]', 'https://www.facebook.com/search/posts/?q=QA%20Tester%20Hiring%20Iligan'),
+  ('Data Analyst', 'Facebook', '["Excel","SQL","Power BI"]', 'https://www.facebook.com/search/posts/?q=Data%20Analyst%20Hiring%20Iligan'),
+  ('IT Encoder', 'Facebook', '["Typing","Excel","file management"]', 'https://www.facebook.com/search/posts/?q=IT%20Encoder%20Hiring%20Iligan'),
+  ('Digital Content Specialist', 'Facebook', '["Canva","content creation","social media"]', 'https://www.facebook.com/search/posts/?q=Social%20Media%20Specialist%20Hiring%20Iligan')
+) as curated(title, company, skills, link)
+where not exists (
+  select 1
+  from public.jobs existing
+  where existing.title = curated.title
+    and existing.company = curated.company
+    and existing.link = curated.link
+);
