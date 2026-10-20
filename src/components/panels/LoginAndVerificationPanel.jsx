@@ -53,13 +53,13 @@ export default function LoginAndVerificationPanel({ alumni, onApprove, onReject 
           <tbody>
             {reviewed.map((a) => (
               <tr key={a.id}>
-                <td>
+                <td data-label="Name">
                   {a.name}{a.isSelf ? " (You)" : ""}{" "}
                   {a.userId && <span className="pill muted" style={{ marginLeft: 6, fontSize: "0.65rem", padding: "2px 8px" }}>online</span>}
                 </td>
-                <td>{a.program}</td>
-                <td>{a.gradYear}</td>
-                <td><VerifyPill status={a.verificationStatus} /></td>
+                <td data-label="Program">{a.program}</td>
+                <td data-label="Year">{a.gradYear}</td>
+                <td data-label="Status"><VerifyPill status={a.verificationStatus} /></td>
               </tr>
             ))}
           </tbody>

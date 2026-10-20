@@ -853,7 +853,7 @@ html, body, #root, .tracer-root {
   width: 46px; height: 46px; border-radius: 12px; background: var(--black); display: flex; align-items: center;
   justify-content: center; flex-shrink: 0;
 }
-.detail-body { flex: 1; min-width: 220px; }
+.detail-body { flex: 1; min-width: 0; }
 .detail-panel h3 { font-family: var(--font-display); margin-bottom: 6px; font-size: clamp(1rem, 3vw, 1.1rem); }
 .detail-panel > .detail-body > p:first-of-type { margin: 0 0 16px; color: rgba(255, 255, 255, 0.75); font-size: 0.88rem; line-height: 1.5; }
 
@@ -1100,12 +1100,18 @@ html, body, #root, .tracer-root {
   .dash-header { flex-direction: row; align-items: center; flex-wrap: nowrap; gap: 12px; }
   .dash-header-title { flex: 1; }
   .dash-header-title.not-dashboard-view { display: none; }
+  .dash-admin .dash-header-title:not(.not-dashboard-view) { max-width: 100%; }
+  .dash-admin .dash-header h1 { overflow-wrap: anywhere; }
   .dash-header-actions { width: auto; flex: 0 0 auto; justify-content: flex-end; gap: 8px; }
   .dash-menu-toggle { order: -1; }
   .dash-profile-action span:not(.ping-dot) { display: none; }
   .notif-dropdown { position: fixed; top: 64px; left: 10px; right: 10px; width: auto; }
   .list-item { flex-direction: column; align-items: flex-start; }
   .bar-label { width: 90px; font-size: 0.72rem; }
+  .dash-admin .detail-panel, .dash-admin .detail-body, .dash-admin .panel-block { width: 100%; min-width: 0; }
+  .dash-admin .access-check-item { min-width: 0; }
+  .dash-admin .access-check-stat { text-align: left; }
+  .dash-admin .list-item-actions { width: 100%; }
 }
 
 @media (max-width: 480px) {
@@ -1121,6 +1127,25 @@ html, body, #root, .tracer-root {
   .bar-label { width: 76px; font-size: 0.68rem; }
   .lock-banner { font-size: 0.8rem; align-items: flex-start; }
   .table-wrap { margin: 0 -2px; }
+  .dash-admin .table-wrap { overflow: visible; margin: 0; }
+  .dash-admin .data-table { display: block; width: 100%; min-width: 0; }
+  .dash-admin .data-table thead { display: none; }
+  .dash-admin .data-table tbody { display: grid; gap: 10px; }
+  .dash-admin .data-table tbody tr {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px;
+    padding: 12px; border: 1px solid #e6e1df; border-radius: 10px; background: var(--white);
+  }
+  .dash-admin .data-table td {
+    display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 3px;
+    padding: 0; border: 0; overflow-wrap: anywhere;
+  }
+  .dash-admin .data-table td::before {
+    content: attr(data-label); color: #777; font-family: var(--font-mono); font-size: 0.62rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .dash-admin .data-table td[data-label="Action"] { justify-content: center; }
+  .dash-admin .data-table td.empty-state { grid-column: 1 / -1; }
+  .dash-admin .data-table td.empty-state::before { content: none; }
   .crest.xl { width: 68px; height: 68px; font-size: 1rem; box-shadow: 0 0 0 4px rgba(255,255,255,0.18); }
   .modal-card { padding: 20px 18px; }
 }

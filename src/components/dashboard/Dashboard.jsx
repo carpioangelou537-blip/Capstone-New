@@ -243,7 +243,7 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
   const activeFeature = features.find((f) => f.title === active);
 
   return (
-    <div className={`dash ${entered ? "in" : ""}`}>
+    <div className={`dash ${entered ? "in" : ""} ${role === "admin" ? "dash-admin" : ""}`}>
       {surveyModalOpen && role === "alumni" && me && me.verificationStatus === "verified" && !me.surveyCompleted && (
         <SurveyModal
           me={safeMe}

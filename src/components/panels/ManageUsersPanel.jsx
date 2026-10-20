@@ -56,12 +56,12 @@ export default function ManageUsersPanel({ alumni, onAdd, onRemove }) {
           <tbody>
             {filteredAlumni.length ? filteredAlumni.map((a) => (
               <tr key={a.id}>
-                <td>{a.name}{a.isSelf ? " (You)" : ""}</td>
-                <td>{a.program}</td>
-                <td>{a.gradYear}</td>
-                <td><StatusPill status={a.surveyCompleted} /></td>
-                <td><VerifyPill status={a.verificationStatus} /></td>
-                <td>
+                <td data-label="Name">{a.name}{a.isSelf ? " (You)" : ""}</td>
+                <td data-label="Program">{a.program}</td>
+                <td data-label="Year">{a.gradYear}</td>
+                <td data-label="Survey"><StatusPill status={a.surveyCompleted} /></td>
+                <td data-label="Status"><VerifyPill status={a.verificationStatus} /></td>
+                <td data-label="Action">
                   {!a.isSelf && (
                     <button className="btn-danger" onClick={() => onRemove(a.id)} aria-label={`Remove ${a.name}`}>
                       <Icon name="trash" size={15} />

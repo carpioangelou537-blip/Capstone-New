@@ -42,12 +42,12 @@ export default function JobApplicationsAdminPanel({ jobApplications, jobs, alumn
               const job = byJobId(a.jobId);
               return (
                 <tr key={a.id}>
-                  <td>{alum ? alum.name : "—"}</td>
-                  <td>{job ? `${job.title} · ${job.company}` : "—"}</td>
-                  <td>
+                  <td data-label="Applicant">{alum ? alum.name : "—"}</td>
+                  <td data-label="Posting">{job ? `${job.title} · ${job.company}` : "—"}</td>
+                  <td data-label="Status">
                     <span className="pill ok"><Icon name="check" size={11} /> {a.status}</span>
                   </td>
-                  <td>{a.appliedAt || "—"}</td>
+                  <td data-label="Applied">{a.appliedAt || "—"}</td>
                 </tr>
               );
             })}
