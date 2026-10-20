@@ -12,9 +12,14 @@ export default function DashboardSidebar({
   canGoBack = false,
   onBack,
   onLogout,
+  menuOpen,
 }) {
   return (
-    <aside className="dash-sidebar">
+    <aside
+      className={`dash-sidebar ${menuOpen ? "open" : ""}`}
+      id="dashboard-navigation"
+      aria-label="Dashboard navigation"
+    >
       <div className="dash-crest">
         <div className="crest small">
           {me?.avatar && role === "alumni" ? (

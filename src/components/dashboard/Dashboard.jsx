@@ -57,6 +57,7 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
 
   const [active, setActive] = useState(features[0].title);
   const [entered, setEntered] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [surveyModalOpen, setSurveyModalOpen] = useState(false);
@@ -64,6 +65,15 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
   const [readNotificationIds, setReadNotificationIds] = useState([]);
   const [seenFeatures, setSeenFeatures] = useState([]);
   const [navigationHistory, setNavigationHistory] = useState([]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     try {
@@ -254,16 +264,29 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
         />
       )}
 
+      {mobileMenuOpen && (
+        <button
+          type="button"
+          className="dash-menu-backdrop"
+          aria-label="Close navigation menu"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       <DashboardSidebar
         role={role}
         me={safeMe}
         features={features}
         active={active}
-        onSelect={goToFeature}
+        onSelect={(feature) => {
+          goToFeature(feature);
+          setMobileMenuOpen(false);
+        }}
         getBadge={getBadge}
         canGoBack={navigationHistory.length > 0}
         onBack={goBack}
         onLogout={onLogout}
+        menuOpen={mobileMenuOpen}
       />
 
       <main className="dash-main">
@@ -278,19 +301,24 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
           onGoto={goToFeature}
           onCloseNotif={() => setNotifOpen(false)}
           onOpenProfile={() => setProfileModalOpen(true)}
+          menuOpen={mobileMenuOpen}
+          onToggleMenu={() => setMobileMenuOpen((open) => !open)}
+          isDashboardView={active === "Dashboard"}
         />
 
-        <section className="stat-grid">
-          {STATS[role].map((s, i) => (
-            <div className="stat-card" style={{ "--i": i }} key={s.label}>
-              <div className="stat-card-icon"><Icon name={s.icon} size={16} /></div>
-              <div className="stat-card-body">
-                <p className="stat-value"><AnimatedNumber value={s.value} start /></p>
-                <p className="stat-label">{s.label}</p>
+        {active === "Dashboard" && (
+          <section className="stat-grid">
+            {STATS[role].map((s, i) => (
+              <div className="stat-card" style={{ "--i": i }} key={s.label}>
+                <div className="stat-card-icon"><Icon name={s.icon} size={16} /></div>
+                <div className="stat-card-body">
+                  <p className="stat-value"><AnimatedNumber value={s.value} start /></p>
+                  <p className="stat-label">{s.label}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </section>
+            ))}
+          </section>
+        )}
 
         {activeFeature && (
           <section className="detail-panel" key={activeFeature.title}>

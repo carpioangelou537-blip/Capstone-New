@@ -16,6 +16,7 @@ export const ICONS = {
   trash: "M7 2h6v2h4v2H3V4h4V2Zm-2 5h10l-1 11H6L5 7Zm3 2v7h1V9H8Zm3 0v7h1V9h-1Z",
   check: "M4 10.5 8 14.5 16 5.5",
   x: "M5 5l10 10M15 5 5 15",
+  menu: "M2 4h16v2H2V4Zm0 5h16v2H2V9Zm0 5h16v2H2v-2Z",
   camera: "M6 4l1-1.5h6L14 4h3v11H3V4h3Zm4 2a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z",
   grid: "M2 2h7v7H2V2Zm9 0h7v7h-7V2ZM2 11h7v7H2v-7Zm9 0h7v7h-7v-7Z",
   shield: "M10 2 3 5v5c0 5 3 7.5 7 9 4-1.5 7-4 7-9V5l-7-3Zm-1 10.5-3-3 1.4-1.4L9 9.7l3.6-3.6L14 7.5l-5 5Z",

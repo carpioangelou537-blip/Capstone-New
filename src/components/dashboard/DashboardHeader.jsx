@@ -13,16 +13,29 @@ export default function DashboardHeader({
   onGoto,
   onCloseNotif,
   onOpenProfile,
+  menuOpen,
+  onToggleMenu,
+  isDashboardView,
 }) {
   return (
     <header className="dash-header">
-      <div>
+      <div className={`dash-header-title ${isDashboardView ? "" : "not-dashboard-view"}`}>
         <p className="eyebrow" style={{ color: "var(--maroon)" }}>
           Good day, {name || me?.name || (role === "admin" ? "Administrator" : "Alumnus")}
         </p>
         <h1>{role === "admin" ? "Alumni Affairs Office Dashboard" : "My Alumni Dashboard"}</h1>
       </div>
       <div className="dash-header-actions">
+        <button
+          type="button"
+          className="dash-menu-toggle"
+          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={menuOpen}
+          aria-controls="dashboard-navigation"
+          onClick={onToggleMenu}
+        >
+          <Icon name={menuOpen ? "x" : "menu"} size={20} />
+        </button>
         {role === "alumni" && (
           <div className="notif-wrap">
             <button
