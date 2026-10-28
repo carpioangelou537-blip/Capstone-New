@@ -83,7 +83,13 @@ export default function SignupPage({ onSubmit, error, goLogin, goHome }) {
             </label>
           </div>
 
-          <label className="field"><span>Login email address</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@spc.edu.ph" autoComplete="email" required /></label>
+          <label className="field">
+            <span>Login email address</span>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@spc.edu.ph" autoComplete="email" required />
+            <small style={{ display: "block", fontSize: "0.72rem", color: "#5f6368", marginTop: 6, lineHeight: 1.4 }}>
+              Use an active email address so we can send your account verification status and important updates.
+            </small>
+          </label>
 
           <div className="field-pair">
             <label className="field"><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" autoComplete="new-password" required /></label>
