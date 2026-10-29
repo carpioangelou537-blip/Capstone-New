@@ -20,6 +20,10 @@ function userDisplayName(u) {
   return [meta.firstName, meta.lastName].filter(Boolean).join(" ");
 }
 
+function userRole(u) {
+  return u?.app_metadata?.role === "admin" ? "admin" : "alumni";
+}
+
 function isHttpLink(link) {
   if (!link) return true;
   try {
@@ -88,7 +92,7 @@ export default function App() {
       if (!active) return;
       if (u) {
         setUser(u);
-        setRole(u.user_metadata?.role || "alumni");
+        setRole(userRole(u));
         setName(userDisplayName(u));
         ensureAlumnusRow(u);
       } else {
@@ -99,7 +103,7 @@ export default function App() {
       if (!active) return;
       if (u) {
         setUser(u);
-        setRole(u.user_metadata?.role || "alumni");
+        setRole(userRole(u));
         setName(userDisplayName(u));
         await ensureAlumnusRow(u);
         setPage("splash");
@@ -181,7 +185,7 @@ export default function App() {
   }
 
   async function ensureAlumnusRow(u) {
-    const r = u.user_metadata?.role || "alumni";
+    const r = userRole(u);
     if (r === "admin") return;
 
     const pendingRequest = alumnusRowRequests.get(u.id);
@@ -252,7 +256,7 @@ export default function App() {
       setAuthError("Sign-in failed. Please try again.");
       return;
     }
-    const r = u.user_metadata?.role || "alumni";
+    const r = userRole(u);
     setRole(r);
     setName(userDisplayName(u));
     await ensureAlumnusRow(u);
@@ -272,7 +276,6 @@ export default function App() {
     const metadata = {
       firstName: form.firstName,
       lastName: form.lastName,
-      role: "alumni",
       program: form.program,
       gradYear: form.gradYear,
     };

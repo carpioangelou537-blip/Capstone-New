@@ -15,9 +15,9 @@
 --    admin_activity_logs      -> audit trail of every admin action
 --
 --  Security model:
---    - Anyone may READ (keeps the landing page stats and directory
---      browsing working for the demo).
---    - Only SIGNED-IN users may INSERT / UPDATE / DELETE.
+--    - Admin access requires trusted Supabase app_metadata.role = 'admin'.
+--    - Alumni can read and modify only their own private records.
+--    - Jobs, events, and notifications are public to read; admin-managed.
 --    - `user_id` columns store the Supabase Auth user UUID.
 -- =====================================================================
 
@@ -38,7 +38,8 @@ $$;
 -- ------------------------------- alumni --------------------------------
 create table if not exists public.alumni (
   id                  uuid primary key default gen_random_uuid(),
-  user_id             text,
+  user_id             uuid,
+  role                text not null default 'alumni',
   full_name           text not null,
   email               text not null default '',
   program             text not null,
@@ -64,6 +65,12 @@ alter table public.alumni add column if not exists date_of_birth date;
 alter table public.alumni add column if not exists email text not null default '';
 alter table public.alumni add column if not exists address text default '';
 alter table public.alumni add column if not exists contact_number text default '';
+alter table public.alumni add column if not exists role text not null default 'alumni';
+alter table public.alumni alter column role set default 'alumni';
+update public.alumni set role = 'alumni' where role is null or role = '';
+alter table public.alumni alter column role set not null;
+alter table public.alumni drop constraint if exists alumni_role_check;
+alter table public.alumni add constraint alumni_role_check check (role in ('alumni', 'admin'));
 
 drop trigger if exists trg_alumni_updated_at on public.alumni;
 create trigger trg_alumni_updated_at
@@ -71,9 +78,48 @@ before update on public.alumni
 for each row
 execute function public.set_updated_at();
 
+create or replace function public.attach_auth_user_id()
+returns trigger
+language plpgsql
+as $$
+begin
+  if auth.uid() is not null then
+    if auth.jwt() -> 'app_metadata' ->> 'role' is distinct from 'admin' then
+      new.user_id = auth.uid();
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.set_alumni_auth_fields()
+returns trigger
+language plpgsql
+as $$
+begin
+  if auth.uid() is not null then
+    if tg_op = 'INSERT' then
+      new.user_id = auth.uid();
+      new.role = 'alumni';
+    elsif auth.jwt() -> 'app_metadata' ->> 'role' is distinct from 'admin' then
+      new.user_id = old.user_id;
+      new.role = old.role;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_alumni_auth_fields on public.alumni;
+create trigger trg_alumni_auth_fields
+before insert or update on public.alumni
+for each row
+execute function public.set_alumni_auth_fields();
+
 -- ------------------------------- jobs ----------------------------------
 create table if not exists public.jobs (
   id         uuid primary key default gen_random_uuid(),
+  created_by uuid,
   title      text not null,
   company    text not null,
   description text default '',
@@ -81,27 +127,32 @@ create table if not exists public.jobs (
   link       text default '',
   created_at timestamptz default timezone('utc', now())
 );
+alter table public.jobs add column if not exists created_by uuid;
 alter table public.jobs add column if not exists description text default '';
 
 -- ------------------------------- events --------------------------------
 create table if not exists public.events (
   id         uuid primary key default gen_random_uuid(),
+  created_by uuid,
   title      text not null,
   description text default '',
   date       date,
   rsvps      jsonb default '[]'::jsonb,
   created_at timestamptz default timezone('utc', now())
 );
+alter table public.events add column if not exists created_by uuid;
 alter table public.events add column if not exists description text default '';
 
 -- ------------------------------- notifications -------------------------
 create table if not exists public.notifications (
   id         uuid primary key default gen_random_uuid(),
+  created_by uuid,
   text       text default '',
   date       date,
   target     text default '',
   created_at timestamptz default timezone('utc', now())
 );
+alter table public.notifications add column if not exists created_by uuid;
 alter table public.notifications add column if not exists link text default '';
 
 -- --------------------------- survey_responses --------------------------
@@ -109,7 +160,7 @@ alter table public.notifications add column if not exists link text default '';
 -- snapshot used for matching; this table preserves every submitted survey.
 create table if not exists public.survey_responses (
   id            uuid primary key default gen_random_uuid(),
-  user_id       text not null,
+  user_id       uuid,
   employed      text default 'Unknown',
   job_title     text default '',
   company_name  text default '',
@@ -127,7 +178,7 @@ drop index if exists survey_responses_user_id_key;
 -- or update their survey.
 create table if not exists public.alumni_skills_history (
   id            uuid primary key default gen_random_uuid(),
-  user_id       text not null,
+  user_id       uuid,
   skills        jsonb default '[]'::jsonb,
   snapshot_date date default current_date,
   created_at    timestamptz default timezone('utc', now())
@@ -138,7 +189,7 @@ create table if not exists public.alumni_skills_history (
 -- survey is submitted.
 create table if not exists public.course_recommendations (
   id         uuid primary key default gen_random_uuid(),
-  user_id    text not null,
+  user_id    uuid,
   skill      text not null,
   demand     integer default 0,
   reason     text default '',
@@ -148,7 +199,7 @@ create table if not exists public.course_recommendations (
 -- --------------------------- job_applications --------------------------
 create table if not exists public.job_applications (
   id         uuid primary key default gen_random_uuid(),
-  user_id    text not null,
+  user_id    uuid,
   job_id     uuid,
   status     text default 'applied',
   applied_at date default current_date,
@@ -158,11 +209,181 @@ create table if not exists public.job_applications (
 -- --------------------------- admin_activity_logs -----------------------
 create table if not exists public.admin_activity_logs (
   id             uuid primary key default gen_random_uuid(),
-  admin_user_id  text,
+  admin_user_id  uuid,
   action         text not null,
   detail         text default '',
   created_at     timestamptz default timezone('utc', now())
 );
+
+-- Normalize legacy text IDs before adding real foreign-key relationships.
+drop index if exists public.alumni_user_id_unique_idx;
+drop policy if exists "read alumni" on public.alumni;
+drop policy if exists "read survey_responses" on public.survey_responses;
+drop policy if exists "read alumni_skills_history" on public.alumni_skills_history;
+drop policy if exists "read course_recommendations" on public.course_recommendations;
+drop policy if exists "read job_applications" on public.job_applications;
+drop policy if exists "signed in insert alumni" on public.alumni;
+drop policy if exists "signed in update alumni" on public.alumni;
+drop policy if exists "signed in delete alumni" on public.alumni;
+drop policy if exists "signed in insert survey_responses" on public.survey_responses;
+drop policy if exists "signed in update survey_responses" on public.survey_responses;
+drop policy if exists "signed in delete survey_responses" on public.survey_responses;
+drop policy if exists "signed in insert alumni_skills_history" on public.alumni_skills_history;
+drop policy if exists "signed in update alumni_skills_history" on public.alumni_skills_history;
+drop policy if exists "signed in delete alumni_skills_history" on public.alumni_skills_history;
+drop policy if exists "signed in insert course_recommendations" on public.course_recommendations;
+drop policy if exists "signed in update course_recommendations" on public.course_recommendations;
+drop policy if exists "signed in delete course_recommendations" on public.course_recommendations;
+drop policy if exists "signed in insert job_applications" on public.job_applications;
+drop policy if exists "signed in update job_applications" on public.job_applications;
+drop policy if exists "signed in delete job_applications" on public.job_applications;
+do $$
+declare
+  item record;
+  uuid_pattern constant text := '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+  current_type text;
+begin
+  for item in
+    select * from (values
+      ('alumni', 'user_id'),
+      ('survey_responses', 'user_id'),
+      ('alumni_skills_history', 'user_id'),
+      ('course_recommendations', 'user_id'),
+      ('job_applications', 'user_id'),
+      ('admin_activity_logs', 'admin_user_id')
+    ) as columns_to_convert(table_name, column_name)
+  loop
+    select data_type into current_type
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = item.table_name
+      and column_name = item.column_name;
+
+    if current_type <> 'uuid' then
+      execute format(
+        'update public.%I set %I = null where %I is not null and btrim(%I::text) !~* %L',
+        item.table_name, item.column_name, item.column_name, item.column_name, uuid_pattern
+      );
+      execute format(
+        'alter table public.%I alter column %I drop not null',
+        item.table_name, item.column_name
+      );
+      execute format(
+        'alter table public.%I alter column %I type uuid using nullif(btrim(%I::text), %L)::uuid',
+        item.table_name, item.column_name, item.column_name, ''
+      );
+    end if;
+  end loop;
+end;
+$$;
+
+-- Associate new Auth signups with an alumni profile automatically.
+create or replace function public.handle_new_auth_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.alumni (user_id, full_name, email, program)
+  values (
+    new.id,
+    coalesce(
+      nullif(trim(concat_ws(
+        ' ',
+        nullif(new.raw_user_meta_data ->> 'firstName', ''),
+        nullif(new.raw_user_meta_data ->> 'lastName', '')
+      )), ''),
+      nullif(new.raw_user_meta_data ->> 'full_name', ''),
+      nullif(new.raw_user_meta_data ->> 'name', ''),
+      nullif(new.email, ''),
+      'New alumnus'
+    ),
+    coalesce(new.email, ''),
+    coalesce(nullif(new.raw_user_meta_data ->> 'program', ''), 'Not provided')
+  )
+  on conflict do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created_alumni on auth.users;
+create trigger on_auth_user_created_alumni
+after insert on auth.users
+for each row
+execute function public.handle_new_auth_user();
+
+drop trigger if exists trg_survey_responses_auth_user_id on public.survey_responses;
+create trigger trg_survey_responses_auth_user_id
+before insert on public.survey_responses
+for each row
+execute function public.attach_auth_user_id();
+
+drop trigger if exists trg_alumni_skills_history_auth_user_id on public.alumni_skills_history;
+create trigger trg_alumni_skills_history_auth_user_id
+before insert on public.alumni_skills_history
+for each row
+execute function public.attach_auth_user_id();
+
+drop trigger if exists trg_course_recommendations_auth_user_id on public.course_recommendations;
+create trigger trg_course_recommendations_auth_user_id
+before insert on public.course_recommendations
+for each row
+execute function public.attach_auth_user_id();
+
+drop trigger if exists trg_job_applications_auth_user_id on public.job_applications;
+create trigger trg_job_applications_auth_user_id
+before insert on public.job_applications
+for each row
+execute function public.attach_auth_user_id();
+
+create or replace function public.attach_admin_auth_user_id()
+returns trigger
+language plpgsql
+as $$
+begin
+  if auth.uid() is not null then
+    new.admin_user_id = auth.uid();
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_admin_activity_logs_auth_user_id on public.admin_activity_logs;
+create trigger trg_admin_activity_logs_auth_user_id
+before insert on public.admin_activity_logs
+for each row
+execute function public.attach_admin_auth_user_id();
+
+create or replace function public.attach_auth_created_by()
+returns trigger
+language plpgsql
+as $$
+begin
+  if auth.uid() is not null then
+    new.created_by = auth.uid();
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_jobs_created_by on public.jobs;
+create trigger trg_jobs_created_by
+before insert on public.jobs
+for each row
+execute function public.attach_auth_created_by();
+
+drop trigger if exists trg_events_created_by on public.events;
+create trigger trg_events_created_by
+before insert on public.events
+for each row
+execute function public.attach_auth_created_by();
+
+drop trigger if exists trg_notifications_created_by on public.notifications;
+create trigger trg_notifications_created_by
+before insert on public.notifications
+for each row
+execute function public.attach_auth_created_by();
 
 -- ------------------------------- RLS ------------------------------------
 alter table public.alumni                 enable row level security;
@@ -230,64 +451,285 @@ drop policy if exists "signed in insert admin_activity_logs"    on public.admin_
 drop policy if exists "signed in update admin_activity_logs"    on public.admin_activity_logs;
 drop policy if exists "signed in delete admin_activity_logs"    on public.admin_activity_logs;
 
--- Anyone can read (demo: landing page + directory browsing).
-create policy "read alumni"                 on public.alumni                 for select using (true);
+-- The admin role is trusted only when stored in Supabase app_metadata.
+-- Public profile and account-linked data are visible only to their owner/admin.
+create policy "read alumni"                 on public.alumni                 for select
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 create policy "read jobs"                   on public.jobs                   for select using (true);
 create policy "read events"                 on public.events                 for select using (true);
 create policy "read notifications"          on public.notifications          for select using (true);
-create policy "read survey_responses"       on public.survey_responses       for select using (true);
-create policy "read alumni_skills_history"  on public.alumni_skills_history  for select using (true);
-create policy "read course_recommendations" on public.course_recommendations for select using (true);
-create policy "read job_applications"       on public.job_applications       for select using (true);
-create policy "read admin_activity_logs"    on public.admin_activity_logs    for select using (true);
+create policy "read survey_responses"       on public.survey_responses       for select
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "read alumni_skills_history"  on public.alumni_skills_history  for select
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "read course_recommendations" on public.course_recommendations for select
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "read job_applications"       on public.job_applications       for select
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "read admin_activity_logs"    on public.admin_activity_logs    for select
+  using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
-grant select on public.alumni, public.jobs, public.events, public.notifications,
-  public.survey_responses, public.alumni_skills_history, public.course_recommendations,
-  public.job_applications, public.admin_activity_logs to anon, authenticated;
+revoke all on public.alumni, public.survey_responses, public.alumni_skills_history,
+  public.course_recommendations, public.job_applications, public.admin_activity_logs from anon;
+grant select on public.jobs, public.events, public.notifications to anon, authenticated;
+grant select, insert, update, delete on public.alumni, public.jobs, public.events,
+  public.notifications, public.survey_responses, public.alumni_skills_history,
+  public.course_recommendations, public.job_applications, public.admin_activity_logs
+  to authenticated;
 
--- Only signed-in users can make changes.
-create policy "signed in insert alumni"                 on public.alumni                 for insert with check (auth.uid() is not null);
-create policy "signed in update alumni"                 on public.alumni                 for update using (auth.uid() is not null);
-create policy "signed in delete alumni"                 on public.alumni                 for delete using (auth.uid() is not null);
-create policy "signed in insert jobs"                   on public.jobs                   for insert with check (auth.uid() is not null);
-create policy "signed in update jobs"                   on public.jobs                   for update using (auth.uid() is not null);
-create policy "signed in delete jobs"                   on public.jobs                   for delete using (auth.uid() is not null);
+create policy "signed in insert alumni" on public.alumni for insert
+  with check (user_id = auth.uid() and role = 'alumni'
+    or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update alumni" on public.alumni for update
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete alumni" on public.alumni for delete
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
-create policy "signed in insert events"                 on public.events                 for insert with check (auth.uid() is not null);
-create policy "signed in update events"                 on public.events                 for update using (auth.uid() is not null);
-create policy "signed in delete events"                 on public.events                 for delete using (auth.uid() is not null);
+create policy "signed in insert jobs" on public.jobs for insert
+  with check (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update jobs" on public.jobs for update
+  using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete jobs" on public.jobs for delete
+  using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
-create policy "signed in insert notifications"          on public.notifications          for insert with check (auth.uid() is not null);
-create policy "signed in update notifications"          on public.notifications          for update using (auth.uid() is not null);
-create policy "signed in delete notifications"          on public.notifications          for delete using (auth.uid() is not null);
+create policy "signed in insert events" on public.events for insert
+  with check (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update events" on public.events for update
+  using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete events" on public.events for delete
+  using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
-create policy "signed in insert survey_responses"       on public.survey_responses       for insert with check (auth.uid() is not null);
-create policy "signed in update survey_responses"       on public.survey_responses       for update using (auth.uid() is not null);
-create policy "signed in delete survey_responses"       on public.survey_responses       for delete using (auth.uid() is not null);
+create policy "signed in insert notifications" on public.notifications for insert
+  with check (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update notifications" on public.notifications for update
+  using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete notifications" on public.notifications for delete
+  using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
-create policy "signed in insert alumni_skills_history"  on public.alumni_skills_history  for insert with check (auth.uid() is not null);
-create policy "signed in update alumni_skills_history"  on public.alumni_skills_history  for update using (auth.uid() is not null);
-create policy "signed in delete alumni_skills_history"  on public.alumni_skills_history  for delete using (auth.uid() is not null);
+create policy "signed in insert survey_responses" on public.survey_responses for insert
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update survey_responses" on public.survey_responses for update
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete survey_responses" on public.survey_responses for delete
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
-create policy "signed in insert course_recommendations" on public.course_recommendations for insert with check (auth.uid() is not null);
-create policy "signed in update course_recommendations" on public.course_recommendations for update using (auth.uid() is not null);
-create policy "signed in delete course_recommendations" on public.course_recommendations for delete using (auth.uid() is not null);
+create policy "signed in insert alumni_skills_history" on public.alumni_skills_history for insert
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update alumni_skills_history" on public.alumni_skills_history for update
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete alumni_skills_history" on public.alumni_skills_history for delete
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
-create policy "signed in insert job_applications"       on public.job_applications       for insert with check (auth.uid() is not null);
-create policy "signed in update job_applications"       on public.job_applications       for update using (auth.uid() is not null);
-create policy "signed in delete job_applications"       on public.job_applications       for delete using (auth.uid() is not null);
+create policy "signed in insert course_recommendations" on public.course_recommendations for insert
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update course_recommendations" on public.course_recommendations for update
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete course_recommendations" on public.course_recommendations for delete
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
-create policy "signed in insert admin_activity_logs"    on public.admin_activity_logs    for insert with check (auth.uid() is not null);
-create policy "signed in update admin_activity_logs"    on public.admin_activity_logs    for update using (auth.uid() is not null);
-create policy "signed in delete admin_activity_logs"    on public.admin_activity_logs    for delete using (auth.uid() is not null);
+create policy "signed in insert job_applications" on public.job_applications for insert
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update job_applications" on public.job_applications for update
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete job_applications" on public.job_applications for delete
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+
+create policy "signed in insert admin_activity_logs" on public.admin_activity_logs for insert
+  with check (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update admin_activity_logs" on public.admin_activity_logs for update
+  using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete admin_activity_logs" on public.admin_activity_logs for delete
+  using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
 create index if not exists alumni_user_id_idx                 on public.alumni (user_id);
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.alumni'::regclass
+      and conname = 'alumni_user_id_key'
+  ) then
+    alter table public.alumni
+      add constraint alumni_user_id_key unique (user_id);
+  end if;
+end;
+$$;
+
+-- Link pre-existing profiles only when both sides have a unique, confirmed email.
+with unique_email_matches as (
+  select alumni.id as alumni_id, auth_user.id as auth_user_id
+  from public.alumni as alumni
+  join auth.users as auth_user
+    on lower(trim(alumni.email)) = lower(trim(auth_user.email))
+  where alumni.user_id is null
+    and nullif(trim(alumni.email), '') is not null
+    and auth_user.email_confirmed_at is not null
+    and (
+      select count(*)
+      from public.alumni as same_email_alumni
+      where lower(trim(same_email_alumni.email)) = lower(trim(alumni.email))
+    ) = 1
+    and (
+      select count(*)
+      from auth.users as same_email_user
+      where lower(trim(same_email_user.email)) = lower(trim(auth_user.email))
+        and same_email_user.email_confirmed_at is not null
+    ) = 1
+    and not exists (
+      select 1
+      from public.alumni as existing_link
+      where existing_link.user_id = auth_user.id
+        and existing_link.id <> alumni.id
+    )
+)
+update public.alumni
+set user_id = unique_email_matches.auth_user_id
+from unique_email_matches
+where public.alumni.id = unique_email_matches.alumni_id;
+
+-- Retain historical rows while clearing IDs that no longer resolve to an account.
+update public.alumni as alumni
+set user_id = null
+where alumni.user_id is not null
+  and not exists (select 1 from auth.users as auth_user where auth_user.id = alumni.user_id);
+
+-- Create profiles for existing Auth accounts that were not linked by email.
+insert into public.alumni (user_id, full_name, email, program)
+select
+  auth_user.id,
+  coalesce(
+    nullif(trim(concat_ws(
+      ' ',
+      nullif(auth_user.raw_user_meta_data ->> 'firstName', ''),
+      nullif(auth_user.raw_user_meta_data ->> 'lastName', '')
+    )), ''),
+    nullif(auth_user.raw_user_meta_data ->> 'full_name', ''),
+    nullif(auth_user.raw_user_meta_data ->> 'name', ''),
+    nullif(auth_user.email, ''),
+    'New alumnus'
+  ),
+  coalesce(auth_user.email, ''),
+  coalesce(nullif(auth_user.raw_user_meta_data ->> 'program', ''), 'Not provided')
+from auth.users as auth_user
+where not exists (
+  select 1
+  from public.alumni
+  where public.alumni.user_id = auth_user.id
+)
+on conflict (user_id) do nothing;
+
+update public.survey_responses as response
+set user_id = null
+where response.user_id is not null
+and not exists (
+  select 1 from public.alumni as alumnus where alumnus.user_id = response.user_id
+);
+update public.alumni_skills_history as history
+set user_id = null
+where history.user_id is not null
+and not exists (
+  select 1 from public.alumni as alumnus where alumnus.user_id = history.user_id
+);
+update public.course_recommendations as recommendation
+set user_id = null
+where recommendation.user_id is not null
+and not exists (
+  select 1 from public.alumni as alumnus where alumnus.user_id = recommendation.user_id
+);
+update public.job_applications as application
+set user_id = null
+where application.user_id is not null
+and not exists (
+  select 1 from public.alumni as alumnus where alumnus.user_id = application.user_id
+);
+update public.job_applications as application
+set job_id = null
+where application.job_id is not null
+and not exists (
+  select 1 from public.jobs as job where job.id = application.job_id
+);
+update public.admin_activity_logs as activity
+set admin_user_id = null
+where activity.admin_user_id is not null
+and not exists (
+  select 1 from auth.users as auth_user where auth_user.id = activity.admin_user_id
+);
+
+-- Foreign keys make these relationships visible in the Supabase schema diagram.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conrelid = 'public.alumni'::regclass and conname = 'alumni_user_id_auth_users_fkey') then
+    alter table public.alumni add constraint alumni_user_id_auth_users_fkey
+      foreign key (user_id) references auth.users(id) on delete cascade not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.survey_responses'::regclass and conname = 'survey_responses_user_id_alumni_fkey') then
+    alter table public.survey_responses add constraint survey_responses_user_id_alumni_fkey
+      foreign key (user_id) references public.alumni(user_id) on delete cascade not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.alumni_skills_history'::regclass and conname = 'alumni_skills_history_user_id_alumni_fkey') then
+    alter table public.alumni_skills_history add constraint alumni_skills_history_user_id_alumni_fkey
+      foreign key (user_id) references public.alumni(user_id) on delete cascade not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.course_recommendations'::regclass and conname = 'course_recommendations_user_id_alumni_fkey') then
+    alter table public.course_recommendations add constraint course_recommendations_user_id_alumni_fkey
+      foreign key (user_id) references public.alumni(user_id) on delete cascade not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.job_applications'::regclass and conname = 'job_applications_user_id_alumni_fkey') then
+    alter table public.job_applications add constraint job_applications_user_id_alumni_fkey
+      foreign key (user_id) references public.alumni(user_id) on delete cascade not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.job_applications'::regclass and conname = 'job_applications_job_id_jobs_fkey') then
+    alter table public.job_applications add constraint job_applications_job_id_jobs_fkey
+      foreign key (job_id) references public.jobs(id) on delete set null not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.admin_activity_logs'::regclass and conname = 'admin_activity_logs_admin_user_id_auth_users_fkey') then
+    alter table public.admin_activity_logs add constraint admin_activity_logs_admin_user_id_auth_users_fkey
+      foreign key (admin_user_id) references auth.users(id) on delete set null not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.jobs'::regclass and conname = 'jobs_created_by_auth_users_fkey') then
+    alter table public.jobs add constraint jobs_created_by_auth_users_fkey
+      foreign key (created_by) references auth.users(id) on delete set null not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.events'::regclass and conname = 'events_created_by_auth_users_fkey') then
+    alter table public.events add constraint events_created_by_auth_users_fkey
+      foreign key (created_by) references auth.users(id) on delete set null not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.notifications'::regclass and conname = 'notifications_created_by_auth_users_fkey') then
+    alter table public.notifications add constraint notifications_created_by_auth_users_fkey
+      foreign key (created_by) references auth.users(id) on delete set null not valid;
+  end if;
+end;
+$$;
+
+alter table public.alumni validate constraint alumni_user_id_auth_users_fkey;
+alter table public.survey_responses validate constraint survey_responses_user_id_alumni_fkey;
+alter table public.alumni_skills_history validate constraint alumni_skills_history_user_id_alumni_fkey;
+alter table public.course_recommendations validate constraint course_recommendations_user_id_alumni_fkey;
+alter table public.job_applications validate constraint job_applications_user_id_alumni_fkey;
+alter table public.job_applications validate constraint job_applications_job_id_jobs_fkey;
+alter table public.admin_activity_logs validate constraint admin_activity_logs_admin_user_id_auth_users_fkey;
+alter table public.jobs validate constraint jobs_created_by_auth_users_fkey;
+alter table public.events validate constraint events_created_by_auth_users_fkey;
+alter table public.notifications validate constraint notifications_created_by_auth_users_fkey;
+
 create index if not exists survey_responses_user_id_idx       on public.survey_responses (user_id);
 create index if not exists skills_history_user_id_idx         on public.alumni_skills_history (user_id);
 create index if not exists recommendations_user_id_idx        on public.course_recommendations (user_id);
 create index if not exists job_applications_user_id_idx       on public.job_applications (user_id);
 create index if not exists job_applications_job_id_idx        on public.job_applications (job_id);
 create index if not exists admin_activity_logs_admin_idx      on public.admin_activity_logs (admin_user_id);
+create index if not exists jobs_created_by_idx                on public.jobs (created_by);
+create index if not exists events_created_by_idx              on public.events (created_by);
+create index if not exists notifications_created_by_idx       on public.notifications (created_by);
 
 -- ------------------------------- seed data ------------------------------
 -- Mirrors the bundled SEED_* data so the connected dashboard looks the
@@ -318,29 +760,28 @@ begin
     insert into public.notifications (text, date, target) values
       ('Welcome to the Alumni Tracer System! Complete your survey to unlock job matches.', '2026-08-01', 'Complete the Alumni Survey');
 
-    -- Survey responses (the seeded users above, keyed by '' since they have
-    -- no real Auth user_id — real sign-ups get their own user_id).
+    -- Demo history is intentionally unlinked; real submissions use Auth user IDs.
     insert into public.survey_responses (user_id, employed, job_title, company_name, business_name, years, skills) values
-      ('', 'Employed',       'Junior Web Developer',        'Iligan Digital Solutions', '', '1', '["JavaScript","React"]'),
-      ('', 'Employed',       'Data & Systems Coordinator',  'CDO Analytics Hub',        '', '3', '["SQL","Project Management","Python"]'),
-      ('', 'Employed',       'Frontend Developer',          'Iligan Digital Solutions', '', '1', '["React","Node.js","UI/UX"]'),
-      ('', 'Self Employed',  '',                            '',                         'Reyes Network Consulting', '4', '["Networking","Cybersecurity"]'),
-      ('', 'Unemployed',     '',                            '',                         '', '', '["Java","Data Analysis"]');
+      (null, 'Employed',       'Junior Web Developer',        'Iligan Digital Solutions', '', '1', '["JavaScript","React"]'),
+      (null, 'Employed',       'Data & Systems Coordinator',  'CDO Analytics Hub',        '', '3', '["SQL","Project Management","Python"]'),
+      (null, 'Employed',       'Frontend Developer',          'Iligan Digital Solutions', '', '1', '["React","Node.js","UI/UX"]'),
+      (null, 'Self Employed',  '',                            '',                         'Reyes Network Consulting', '4', '["Networking","Cybersecurity"]'),
+      (null, 'Unemployed',     '',                            '',                         '', '', '["Java","Data Analysis"]');
 
     insert into public.alumni_skills_history (user_id, skills, snapshot_date) values
-      ('', '["JavaScript","React","SQL"]', current_date - 30),
-      ('', '["React","Node.js","UI/UX"]',  current_date - 20);
+      (null, '["JavaScript","React","SQL"]', current_date - 30),
+      (null, '["React","Node.js","UI/UX"]',  current_date - 20);
 
     insert into public.course_recommendations (user_id, skill, demand, reason) values
-      ('', 'Networking',  1, 'Requested by IT Support Specialist at Northern Mindanao Hospital'),
-      ('', 'Node.js',     1, 'Requested by Junior Web Developer at Iligan Digital Solutions');
+      (null, 'Networking',  1, 'Requested by IT Support Specialist at Northern Mindanao Hospital'),
+      (null, 'Node.js',     1, 'Requested by Junior Web Developer at Iligan Digital Solutions');
 
     insert into public.job_applications (user_id, job_id, status, applied_at) select
-      '', id, 'applied', current_date - 3 from public.jobs where title = 'Data Analyst';
+      null, id, 'applied', current_date - 3 from public.jobs where title = 'Data Analyst';
 
     insert into public.admin_activity_logs (admin_user_id, action, detail) values
-      ('', 'approved_alumnus',    'Maria Santos'),
-      ('', 'published_job',       'Junior Web Developer at Iligan Digital Solutions');
+      (null, 'approved_alumnus',    'Maria Santos'),
+      (null, 'published_job',       'Junior Web Developer at Iligan Digital Solutions');
   end if;
 end $$;
 
@@ -397,3 +838,54 @@ where not exists (
     and existing.company = curated.company
     and existing.link = curated.link
 );
+
+-- Promote the existing admin@gmail.com Auth account.
+-- Create/confirm this account in Supabase Auth first; SQL does not create passwords.
+do $$
+declare
+  admin_id uuid;
+begin
+  select id
+  into admin_id
+  from auth.users
+  where lower(email) = 'admin@gmail.com';
+
+  if admin_id is null then
+    raise notice 'No Auth account found for admin@gmail.com. Create and confirm it in Supabase Auth, then run this script again.';
+    return;
+  end if;
+
+  update auth.users
+  set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+    || jsonb_build_object('role', 'admin'),
+    updated_at = timezone('utc', now())
+  where id = admin_id;
+
+  update public.alumni
+  set role = 'admin'
+  where user_id = admin_id;
+
+  if not found then
+    insert into public.alumni (user_id, full_name, email, program, role)
+    select
+      id,
+      coalesce(
+        nullif(trim(concat_ws(
+          ' ',
+          nullif(raw_user_meta_data ->> 'firstName', ''),
+          nullif(raw_user_meta_data ->> 'lastName', '')
+        )), ''),
+        nullif(raw_user_meta_data ->> 'full_name', ''),
+        nullif(raw_user_meta_data ->> 'name', ''),
+        email,
+        'Administrator'
+      ),
+      coalesce(email, 'admin@gmail.com'),
+      coalesce(nullif(raw_user_meta_data ->> 'program', ''), 'Administration'),
+      'admin'
+    from auth.users
+    where id = admin_id
+    on conflict (user_id) do update set role = 'admin';
+  end if;
+end;
+$$;
