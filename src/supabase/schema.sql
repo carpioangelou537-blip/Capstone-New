@@ -102,6 +102,7 @@ create table if not exists public.notifications (
   target     text default '',
   created_at timestamptz default timezone('utc', now())
 );
+alter table public.notifications add column if not exists link text default '';
 
 -- --------------------------- survey_responses --------------------------
 -- Append-only employment survey history. The alumni table stores the latest

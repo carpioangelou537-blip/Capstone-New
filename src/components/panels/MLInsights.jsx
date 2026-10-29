@@ -8,12 +8,11 @@ export default function MLInsights({
   jobs,
   surveyResponses = [],
   currentAlumnus,
-  onApply,
-  appliedJobIds = [],
 }) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [visibleBestJobsCount, setVisibleBestJobsCount] = useState(10);
   const payload = useMemo(
     () => JSON.stringify({ alumni, jobs, courses: [], surveyResponses }),
     [alumni, jobs, surveyResponses],
@@ -23,6 +22,7 @@ export default function MLInsights({
     const controller = new AbortController();
     setLoading(true);
     setError("");
+    setVisibleBestJobsCount(10);
     const data = JSON.parse(payload);
     const analysis = isMlServiceConfigured()
       ? analyzeCareerData(data, controller.signal)
@@ -93,7 +93,6 @@ export default function MLInsights({
         {currentAlumnus && recommendations.length > 0 && <div className="list-block">
         {recommendations.map((match) => {
           const job = jobsById.get(match.jobId);
-          const applied = appliedJobIds.includes(match.jobId);
           return (
             <div className="list-item" key={`${match.alumniId}-${match.jobId}`}>
               <div className="list-item-main">
@@ -111,23 +110,16 @@ export default function MLInsights({
                 )}
                 {job?.link && (
                   <a href={job.link} target="_blank" rel="noopener noreferrer" className="notif-goto" style={{ marginTop: 8, display: "inline-flex" }}>
-                    <Icon name="arrow" size={12} /> View posting
+                    <Icon name="arrow" size={12} /> Visit posting
                   </a>
                 )}
               </div>
-              {onApply && (applied ? (
-                <span className="pill muted">Applied</span>
-              ) : (
-                <button className="btn-primary" style={{ whiteSpace: "nowrap", padding: "8px 14px" }} onClick={() => onApply(match.jobId)}>
-                  <Icon name="arrow" size={12} /> Apply
-                </button>
-              ))}
             </div>
           );
         })}
         </div>}
         {!currentAlumnus && bestJobs.length > 0 && <div className="list-block">
-        {bestJobs.map(({ job, average, matchedAlumni }) => (
+        {bestJobs.slice(0, visibleBestJobsCount).map(({ job, average, matchedAlumni }) => (
           <div className="list-item" key={job.id}>
             <div className="list-item-main">
               <div className="list-item-title">{job.title}</div>
@@ -137,6 +129,16 @@ export default function MLInsights({
           </div>
         ))}
         </div>}
+        {!currentAlumnus && visibleBestJobsCount < bestJobs.length && (
+          <button
+            type="button"
+            className="btn-ghost"
+            style={{ marginTop: 10 }}
+            onClick={() => setVisibleBestJobsCount((count) => count + 10)}
+          >
+            Show more
+          </button>
+        )}
       </section>
       <div className="list-item-sub" style={{ marginTop: 8 }}>
         NLP extracted {techniques.nlp.skillsExtracted} skills from current job postings.

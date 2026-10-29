@@ -3,17 +3,24 @@ import EmptyState from "../ui/EmptyState";
 import Icon from "../ui/Icon";
 import MLInsights from "./MLInsights";
 
-export default function CareerToolsPanel({ me, jobs, alumni, surveyResponses, onApply, jobApplications }) {
+export default function CareerToolsPanel({ me, jobs, alumni, surveyResponses }) {
   const [searchQuery, setSearchQuery] = useState("");
-  const appliedJobIds = (jobApplications || []).map((application) => String(application.jobId));
+  const [visibleJobsCount, setVisibleJobsCount] = useState(10);
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const filteredJobs = jobs.filter((job) =>
     [job.title, job.company, job.description, ...(job.skills || [])]
       .some((value) => String(value || "").toLocaleLowerCase().includes(normalizedQuery))
   );
+  const visibleJobs = filteredJobs.slice(0, visibleJobsCount);
 
   return (
     <div className="panel-block">
+      <MLInsights
+        alumni={alumni}
+        jobs={jobs}
+        surveyResponses={surveyResponses}
+        currentAlumnus={me}
+      />
       {jobs.length === 0 && <EmptyState icon="brief" text="No postings yet — check back once the AAO publishes openings." />}
       {jobs.length > 0 && (
         <section>
@@ -27,14 +34,17 @@ export default function CareerToolsPanel({ me, jobs, alumni, surveyResponses, on
               aria-label="Search job listings by title, source, or skill"
               placeholder="Search jobs by title, source, or skill"
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setVisibleJobsCount(10);
+              }}
             />
           </form>
           <div className="list-item-sub" style={{ marginBottom: 8 }}>
-            Showing {filteredJobs.length} of {jobs.length} listings
+            Showing {visibleJobs.length} of {filteredJobs.length} matching listings
           </div>
           <div className="list-block">
-            {filteredJobs.map((job) => (
+            {visibleJobs.map((job) => (
               <div className="list-item" key={job.id}>
                 <div className="list-item-main">
                   <div className="list-item-title">{job.title}</div>
@@ -53,17 +63,19 @@ export default function CareerToolsPanel({ me, jobs, alumni, surveyResponses, on
               </div>
             ))}
           </div>
+          {visibleJobs.length < filteredJobs.length && (
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ marginTop: 10 }}
+              onClick={() => setVisibleJobsCount((count) => count + 10)}
+            >
+              Show more
+            </button>
+          )}
           {filteredJobs.length === 0 && <EmptyState icon="brief" text="No job listings match your search. Try another title, source, or skill." />}
         </section>
       )}
-      <MLInsights
-        alumni={alumni}
-        jobs={jobs}
-        surveyResponses={surveyResponses}
-        currentAlumnus={me}
-        onApply={onApply}
-        appliedJobIds={appliedJobIds}
-      />
     </div>
   );
 }

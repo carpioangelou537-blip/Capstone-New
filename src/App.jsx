@@ -20,6 +20,15 @@ function userDisplayName(u) {
   return [meta.firstName, meta.lastName].filter(Boolean).join(" ");
 }
 
+function isHttpLink(link) {
+  if (!link) return true;
+  try {
+    return ["http:", "https:"].includes(new URL(link).protocol);
+  } catch {
+    return false;
+  }
+}
+
 export default function App() {
   const [booting, setBooting] = useState(true);
   const [page, setPage] = useState("landing");
@@ -417,19 +426,33 @@ export default function App() {
       api.deleteAlumnus(id).catch(() => {});
       actions.logAdmin("removed_alumnus", target ? target.name : "");
     },
-    approveAlumni(id) {
+    async approveAlumni(id) {
       const alumnus = alumni.find((a) => a.id === id);
+      if (!alumnus) return;
+
+      try {
+        await api.updateAlumnus(id, { verificationStatus: "verified" });
+      } catch (error) {
+        console.error("Could not verify the alumnus account.", error);
+        addToast(`Could not approve ${alumnus.name}: ${error.message || "database request failed."}`);
+        return;
+      }
+
       setAlumni((list) => list.map((a) => (a.id === id ? { ...a, verificationStatus: "verified" } : a)));
-      api.updateAlumnus(id, { verificationStatus: "verified" }).catch(() => {});
-      if (alumnus) {
-        actions.logAdmin("approved_alumnus", alumnus.name);
-        api
-          .sendApprovalEmail(alumnus.userId, alumnus.name)
-          .then((r) => {
-            if (r && r.ok) addToast("Alumnus approved — confirmation email sent.");
-          })
-          .catch(() => {});
-        addToast("Alumnus approved.");
+      actions.logAdmin("approved_alumnus", alumnus.name);
+
+      if (!alumnus.email) {
+        addToast("Alumnus approved, but no email address is available for notification.");
+        return;
+      }
+
+      try {
+        const result = await api.sendApprovalEmail(alumnus.userId, alumnus.email, alumnus.name);
+        if (!result?.ok) throw new Error(result?.error || "Email provider rejected the message.");
+        addToast("Alumnus approved — verification email sent.");
+      } catch (error) {
+        console.error("Alumnus approved, but the verification email could not be sent.", error);
+        addToast(`Alumnus approved, but the email could not be sent: ${error.message || "email service request failed."}`);
       }
     },
     rejectAlumni(id) {
@@ -484,17 +507,65 @@ export default function App() {
       api.setEventRsvps(eventId, next).catch(() => {});
       addToast("RSVP updated.");
     },
-    sendNotification(text, target = "Complete the Alumni Survey") {
-      const record = { id: uid(), text, date: todayString(), target };
-      setNotifications((list) => [record, ...list]);
-      api
-        .insertNotification(record)
-        .then((row) => {
-          setNotifications((list) => list.map((n) => (n.id === record.id ? { ...n, id: row.id } : n)));
-        })
-        .catch(() => {});
+    async sendNotification(text, target = "", link = "") {
+      if (!isHttpLink(link)) {
+        addToast("Please enter a valid link starting with http:// or https://.");
+        return false;
+      }
+      const record = { id: uid(), text, date: todayString(), target, link };
+      try {
+        const row = await api.insertNotification(record);
+        setNotifications((list) => [{ ...record, id: row.id }, ...list]);
+      } catch (error) {
+        console.error("Could not save the notification.", error);
+        addToast(`Could not send notification: ${error.message || "database request failed."}`);
+        return false;
+      }
       actions.logAdmin("sent_notification", text);
       addToast("Notification sent to all alumni.");
+      return true;
+    },
+    async updateNotification(id, changes) {
+      if (!isHttpLink(changes.link)) {
+        addToast("Please enter a valid link starting with http:// or https://.");
+        return false;
+      }
+      const notification = notifications.find((item) => item.id === id);
+      if (!notification) {
+        addToast("Could not find that notification. Refresh and try again.");
+        return false;
+      }
+      try {
+        await api.updateNotification(id, changes);
+        setNotifications((list) => list.map((item) => (
+          item.id === id ? { ...item, ...changes } : item
+        )));
+      } catch (error) {
+        console.error("Could not update the notification.", error);
+        addToast(`Could not update notification: ${error.message || "database request failed."}`);
+        return false;
+      }
+      actions.logAdmin("updated_notification", changes.text);
+      addToast("Notification updated.");
+      return true;
+    },
+    async deleteNotification(id) {
+      const notification = notifications.find((item) => item.id === id);
+      if (!notification) {
+        addToast("Could not find that notification. Refresh and try again.");
+        return false;
+      }
+      try {
+        await api.deleteNotification(id);
+        setNotifications((list) => list.filter((item) => item.id !== id));
+      } catch (error) {
+        console.error("Could not delete the notification.", error);
+        addToast(`Could not delete notification: ${error.message || "database request failed."}`);
+        return false;
+      }
+      actions.logAdmin("deleted_notification", notification.text);
+      addToast("Notification deleted.");
+      return true;
     },
   };
 

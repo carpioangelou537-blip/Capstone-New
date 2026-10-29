@@ -6,7 +6,7 @@ export function AdminDashboardOverview({ alumni, jobs, events, notifications, on
   const pendingVerifications = alumni.filter((a) => a.verificationStatus === "pending").length;
 
   const updates = [
-    ...notifications.map((n) => ({ id: n.id, text: n.text, date: n.date, icon: "bell", target: "Manage Notifications" })),
+    ...notifications.map((n) => ({ id: n.id, text: n.text, date: n.date, icon: "bell", target: "Manage Notifications", link: n.link })),
     ...jobs.map((j) => ({ id: `job-${j.id}`, text: `New posting: ${j.title} at ${j.company}`, date: null, icon: "brief", target: "Career Tools & Job Postings" })),
     ...events.map((e) => ({ id: `ev-${e.id}`, text: `Upcoming: ${e.title}`, date: e.date, icon: "calendar", target: "Manage Event Posting" })),
   ].sort((a, b) => (a.date && b.date ? (a.date < b.date ? 1 : -1) : 0));
@@ -31,6 +31,11 @@ export function AdminDashboardOverview({ alumni, jobs, events, notifications, on
             <div className="list-item-main">
               <div className="list-item-title" style={{ fontWeight: 500 }}>{n.text}</div>
               <div className="list-item-sub">{n.date || "Just posted"}</div>
+              {n.link && /^https?:\/\//i.test(n.link) && (
+                <a href={n.link} target="_blank" rel="noopener noreferrer" className="notif-goto" style={{ marginTop: 6, display: "inline-flex" }}>
+                  Open link <Icon name="arrow" size={12} />
+                </a>
+              )}
             </div>
             <button type="button" className="notif-goto" onClick={() => onNavigate(n.target)}>
               Go to {n.target} <Icon name="arrow" size={12} />
@@ -47,7 +52,7 @@ export function AlumniDashboardOverview({ me, jobs, events, notifications, onNav
   const skillAlignment = getDigitalSkillAlignment(me);
   const matchedJobs = matchMetrics.matchedJobCount;
   const updates = [
-    ...notifications.map((n) => ({ id: n.id, text: n.text, date: n.date, target: n.target })),
+    ...notifications.map((n) => ({ id: n.id, text: n.text, date: n.date, target: n.target, link: n.link })),
     ...events.map((e) => ({ id: `ev-${e.id}`, text: `Upcoming: ${e.title}`, date: e.date, target: "Events & Activities" })),
   ].sort((a, b) => (a.date < b.date ? 1 : -1));
 
@@ -68,6 +73,11 @@ export function AlumniDashboardOverview({ me, jobs, events, notifications, onNav
             <div className="list-item-main">
               <div className="list-item-title" style={{ fontWeight: 500 }}>{n.text}</div>
               <div className="list-item-sub">{n.date}</div>
+              {n.link && /^https?:\/\//i.test(n.link) && (
+                <a href={n.link} target="_blank" rel="noopener noreferrer" className="notif-goto" style={{ marginTop: 6, display: "inline-flex" }}>
+                  Open link <Icon name="arrow" size={12} />
+                </a>
+              )}
             </div>
             {n.target && (
               <button type="button" className="notif-goto" onClick={() => onNavigate(n.target)}>

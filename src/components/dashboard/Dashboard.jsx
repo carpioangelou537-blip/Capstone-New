@@ -28,7 +28,6 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
     notifications,
     surveyResponses,
     skillsHistory,
-    jobApplications,
     actions,
   } = domain;
   const safeMe = me || {
@@ -194,7 +193,6 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
     return null;
   }
 
-  const myApplications = jobApplications.filter((a) => a.userId && a.userId === safeMe.userId);
   const mySurveyHistory = surveyResponses
     .filter((response) => response.userId && response.userId === safeMe.userId)
     .sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0));
@@ -213,7 +211,14 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
         case "View Survey Results":
           return <SurveyResultsPanel alumni={alumni} surveyResponses={surveyResponses} />;
         case "Manage Notifications":
-          return <NotifyComposerPanel notifications={notifications} onSend={actions.sendNotification} />;
+          return (
+            <NotifyComposerPanel
+              notifications={notifications}
+              onSend={actions.sendNotification}
+              onUpdate={actions.updateNotification}
+              onDelete={actions.deleteNotification}
+            />
+          );
         case "View AI Analytics":
           return <AnalyticsPanel alumni={alumni} jobs={jobs} surveyResponses={surveyResponses} />;
         case "Career Tools & Job Postings":
@@ -230,9 +235,9 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
       case "Complete the Alumni Survey":
         return <SurveyFormPanel me={safeMe} onSubmit={handleSurveySubmit} surveyHistory={mySurveyHistory} />;
       case "Job Alignment":
-        return <JobAlignmentPanel me={safeMe} jobs={jobs} alumni={alumni} surveyResponses={surveyResponses} />;
+        return <JobAlignmentPanel me={safeMe} alumni={alumni} surveyResponses={surveyResponses} />;
       case "Career Tools":
-        return <CareerToolsPanel me={safeMe} jobs={jobs} alumni={alumni} surveyResponses={surveyResponses} onApply={actions.applyJob} jobApplications={myApplications} />;
+        return <CareerToolsPanel me={safeMe} jobs={jobs} alumni={alumni} surveyResponses={surveyResponses} />;
       case "Events & Activities":
         return <EventsAlumniPanel events={events} me={safeMe} onRsvp={actions.rsvpEvent} />;
       default:

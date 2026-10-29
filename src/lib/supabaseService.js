@@ -154,11 +154,11 @@ function rowToEvent(row) {
 }
 
 function notificationToRow(rec) {
-  return { id: rec.id, text: rec.text, date: rec.date, target: rec.target || null };
+  return { id: rec.id, text: rec.text, date: rec.date, target: rec.target || null, link: rec.link || null };
 }
 
 function rowToNotification(row) {
-  return { id: row.id, text: row.text, date: row.date, target: row.target || null };
+  return { id: row.id, text: row.text, date: row.date, target: row.target || null, link: row.link || "" };
 }
 
 function surveyToRow(rec) {
@@ -470,6 +470,22 @@ export async function insertNotification(rec) {
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function updateNotification(id, rec) {
+  const { data, error } = await supabase
+    .from(TABLES.notifications)
+    .update({ text: rec.text, target: rec.target || null, link: rec.link || null })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteNotification(id) {
+  const { error } = await supabase.from(TABLES.notifications).delete().eq("id", id);
+  if (error) throw error;
 }
 
 export async function insertSurveyResponse(rec) {

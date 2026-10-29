@@ -2,6 +2,7 @@ import { useState } from "react";
 import Icon from "../ui/Icon";
 
 export default function JobsAdminPanel({ jobs, onAdd, onRemove }) {
+  const [visibleJobsCount, setVisibleJobsCount] = useState(10);
   const [title, setTitle] = useState("");
   const [company, setCompany] = useState("");
   const [description, setDescription] = useState("");
@@ -28,8 +29,13 @@ export default function JobsAdminPanel({ jobs, onAdd, onRemove }) {
         <button type="submit" className="btn-ghost" style={{ alignSelf: "flex-start" }}><Icon name="plus" size={14} /> Publish posting</button>
       </form>
 
+      {jobs.length > 0 && (
+        <div className="list-item-sub" style={{ marginBottom: 8 }}>
+          Showing {Math.min(visibleJobsCount, jobs.length)} of {jobs.length} postings
+        </div>
+      )}
       <div className="list-block">
-        {jobs.map((j) => (
+        {jobs.slice(0, visibleJobsCount).map((j) => (
           <div className="list-item" key={j.id}>
             <div className="list-item-main">
               <div className="list-item-title">{j.title}</div>
@@ -48,6 +54,16 @@ export default function JobsAdminPanel({ jobs, onAdd, onRemove }) {
           </div>
         ))}
       </div>
+      {visibleJobsCount < jobs.length && (
+        <button
+          type="button"
+          className="btn-ghost"
+          style={{ marginTop: 10 }}
+          onClick={() => setVisibleJobsCount((count) => count + 10)}
+        >
+          Show more
+        </button>
+      )}
     </div>
   );
 }

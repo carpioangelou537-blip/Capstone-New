@@ -31,6 +31,11 @@ export default function NotificationDropdown({ notifications, onGoto, onClose })
           <div className="notif-item-text">{n.text}</div>
           <div className="notif-item-meta">
             <span className="notif-item-date">{n.date}</span>
+            {n.link && /^https?:\/\//i.test(n.link) && (
+              <a href={n.link} target="_blank" rel="noopener noreferrer" className="notif-goto">
+                Open link <Icon name="arrow" size={12} />
+              </a>
+            )}
             {n.target && (
               <button
                 type="button"
