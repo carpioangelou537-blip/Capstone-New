@@ -163,6 +163,11 @@ html, body, #root, .tracer-root {
 .role-tab.active { background: var(--color-primary); color: var(--white); box-shadow: 0 6px 14px -6px rgba(92, 15, 26, 0.6); }
 .role-tab:not(.active):hover { color: var(--color-primary); transform: translateY(-1px); }
 
+.auth-error, .auth-success {
+  border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; line-height: 1.5; margin-bottom: 14px;
+}
+.auth-error { background: rgba(92,15,26,0.08); color: var(--maroon-bright); border: 1px solid rgba(92,15,26,0.25); }
+.auth-success { background: rgba(36,112,74,0.08); color: #246f49; border: 1px solid rgba(36,112,74,0.25); }
 .auth-form { display: flex; flex-direction: column; gap: 16px; }
 .field { display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; font-weight: 600; color: var(--color-text); }
 .field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }

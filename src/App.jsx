@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { STYLES } from "./styles/global";
 import { uid, todayString, getSkillGaps } from "./lib/utils";
 import { PROGRAM_OPTIONS, CURRENT_YEAR } from "./lib/constants";
@@ -11,9 +11,15 @@ import LandingPage from "./components/landing/LandingPage";
 import LoginPage from "./components/auth/LoginPage";
 import SignupPage from "./components/auth/SignupPage";
 import { PendingVerificationPage, RejectedVerificationPage } from "./components/auth/VerificationPages";
+import { ForgotPasswordPage, UpdatePasswordPage } from "./components/auth/PasswordRecoveryPages";
 import Dashboard from "./components/dashboard/Dashboard";
 
 const alumnusRowRequests = new Map();
+
+function isPasswordRecoveryCallback() {
+  return window.location.hash.includes("type=recovery")
+    || new URLSearchParams(window.location.search).get("type") === "recovery";
+}
 
 function userDisplayName(u) {
   const meta = u.user_metadata || {};
@@ -35,7 +41,9 @@ function isHttpLink(link) {
 
 export default function App() {
   const [booting, setBooting] = useState(true);
-  const [page, setPage] = useState("landing");
+  const [page, setPage] = useState(() => (
+    isPasswordRecoveryCallback() ? "reset-password" : "landing"
+  ));
   const [role, setRole] = useState("alumni");
   const [name, setName] = useState("");
   const [toasts, setToasts] = useState([]);
@@ -43,7 +51,9 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const passwordRecovery = useRef(isPasswordRecoveryCallback());
 
   const data = useSupabaseData(user, refresh);
   const {
@@ -56,6 +66,7 @@ export default function App() {
     courseRecommendations,
     jobApplications,
     adminActivityLogs,
+    passwordResetRequests,
     setAlumni,
     setJobs,
     setEvents,
@@ -64,11 +75,11 @@ export default function App() {
     setCourseRecommendations,
     setJobApplications,
     setAdminActivityLogs,
+    setPasswordResetRequests,
     loading,
     dbStatus,
     me,
   } = data;
-  const [checkedAt, setCheckedAt] = useState(0);
 
   useEffect(() => {
     const t = setTimeout(() => setBooting(false), 1100);
@@ -88,8 +99,12 @@ export default function App() {
   /* restore session + keep it in sync */
   useEffect(() => {
     let active = true;
-    const sub = api.onAuthChange((u) => {
+    const sub = api.onAuthChange((u, event) => {
       if (!active) return;
+      if (event === "PASSWORD_RECOVERY") {
+        passwordRecovery.current = true;
+        setPage("reset-password");
+      }
       if (u) {
         setUser(u);
         setRole(userRole(u));
@@ -106,7 +121,7 @@ export default function App() {
         setRole(userRole(u));
         setName(userDisplayName(u));
         await ensureAlumnusRow(u);
-        setPage("splash");
+        if (!passwordRecovery.current) setPage("splash");
       }
       setAuthChecked(true);
     }).catch(() => {
@@ -127,13 +142,9 @@ export default function App() {
     }
   }, [authChecked, user, page]);
 
-  /* once a user is authenticated and their data has loaded, resolve the
-     correct page: admin -> dashboard, alumnus -> verified dashboard (a
-     forcing survey modal opens there for new alumni), otherwise the
-     pending/rejected gate. Routing never trusts seed data as the real
-     authenticated identity. */
+  /* Resolve authenticated users after their real account data has loaded. */
   useEffect(() => {
-    if (!authChecked || !user || (page !== "splash" && page !== "pending") || loading || dbStatus === "idle") return;
+    if (!authChecked || !user || page !== "splash" || loading || dbStatus === "idle") return;
     if (role === "admin") {
       setPage("dashboard");
       return;
@@ -142,8 +153,8 @@ export default function App() {
       setPage("dashboard");
       return;
     }
-    /* an alumnus with no linked row yet is still in the verification
-       stage — verification always comes before the dashboard/survey */
+    /* A missing alumni row remains pending until the Alumni Affairs Office
+       has enough information to approve the account. */
     if (!me) {
       setPage("pending");
       return;
@@ -158,25 +169,6 @@ export default function App() {
     }
     setPage("dashboard");
   }, [authChecked, user, page, loading, dbStatus, role, me]);
-
-  /* while waiting for approval, keep quietly re-checking so an approved
-     account unlocks on its own the moment the admin verifies it */
-  useEffect(() => {
-    if (page !== "pending") return;
-    const bump = () => {
-      setCheckedAt((n) => n + 1);
-      setRefresh((k) => k + 1);
-    };
-    const id = setInterval(bump, 7000);
-    const onVis = () => {
-      if (!document.hidden) bump();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, [page]);
 
   function addToast(text) {
     const id = uid();
@@ -246,6 +238,7 @@ export default function App() {
 
   async function handleLogin(email, password) {
     setAuthError("");
+    setAuthMessage("");
     const res = await api.signIn(email, password);
     if (res.error) {
       setAuthError(res.error.message);
@@ -261,6 +254,45 @@ export default function App() {
     setName(userDisplayName(u));
     await ensureAlumnusRow(u);
     setPage("splash");
+  }
+
+  async function handlePasswordResetRequest(email) {
+    setAuthError("");
+    const { error } = await api.requestPasswordReset(email);
+    if (error) {
+      setAuthError(error.message);
+      return false;
+    }
+    try {
+      await api.recordPasswordResetRequest(email.toLowerCase());
+    } catch (error) {
+      console.error("Password recovery was requested, but the admin request could not be recorded.", error);
+      setAuthError("The recovery email was requested, but we couldn't notify the admin queue. Please contact the Alumni Affairs Office if you need help.");
+    }
+    return true;
+  }
+
+  async function handlePasswordUpdate(password) {
+    setAuthError("");
+    const { error } = await api.updatePassword(password);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    const { error: signOutError } = await api.signOut();
+    if (signOutError) {
+      console.error("Password updated, but the recovery session could not be signed out.", signOutError);
+      passwordRecovery.current = false;
+      addToast("Password updated, but we could not sign you out automatically. Sign out before leaving this device.");
+      setPage("splash");
+      return;
+    }
+    passwordRecovery.current = false;
+    setAuthMessage("Your password has been updated. You can now sign in with your new password.");
+    setUser(null);
+    setRole("alumni");
+    setName("");
+    setPage("login");
   }
 
   async function handleSignup(form) {
@@ -552,6 +584,26 @@ export default function App() {
       addToast("Notification updated.");
       return true;
     },
+    async markPasswordResetRequestHandled(id) {
+      const request = passwordResetRequests.find((item) => item.id === id);
+      if (!request) {
+        addToast("Could not find that password reset request. Refresh and try again.");
+        return false;
+      }
+      try {
+        await api.markPasswordResetRequestHandled(id);
+      } catch (error) {
+        console.error("Could not mark the password reset request handled.", error);
+        addToast(`Could not update the request: ${error.message || "database request failed."}`);
+        return false;
+      }
+      setPasswordResetRequests((requests) => requests.map((item) => (
+        item.id === id ? { ...item, handledAt: new Date().toISOString() } : item
+      )));
+      actions.logAdmin("handled_password_reset_request", "Password reset request");
+      addToast("Password reset request marked handled.");
+      return true;
+    },
     async deleteNotification(id) {
       const notification = notifications.find((item) => item.id === id);
       if (!notification) {
@@ -582,6 +634,7 @@ export default function App() {
     courseRecommendations,
     jobApplications,
     adminActivityLogs,
+    passwordResetRequests,
     actions,
   };
 
@@ -609,24 +662,34 @@ export default function App() {
       />
     );
   } else if (page === "pending") {
-    body = (
-      <PendingVerificationPage
-        autoCheck={checkedAt > 0}
-        onRefresh={() => {
-          setRefresh((k) => k + 1);
-          setPage("splash");
-        }}
-        onLogout={handleLogout}
-      />
-    );
+    body = <PendingVerificationPage onLogout={handleLogout} />;
   } else if (page === "rejected") {
     body = <RejectedVerificationPage onLogout={handleLogout} />;
+  } else if (page === "forgot-password") {
+    body = (
+      <ForgotPasswordPage
+        onSubmit={handlePasswordResetRequest}
+        error={authError}
+        goLogin={() => {
+          setAuthError("");
+          setPage("login");
+        }}
+        goHome={() => setPage("landing")}
+      />
+    );
+  } else if (page === "reset-password") {
+    body = <UpdatePasswordPage onSubmit={handlePasswordUpdate} error={authError} />;
   } else if (page === "login") {
     body = (
       <LoginPage
         onSubmit={handleLogin}
         error={authError}
+        message={authMessage}
         goSignup={() => setPage("signup")}
+        goForgotPassword={() => {
+          setAuthError("");
+          setPage("forgot-password");
+        }}
         goHome={() => setPage("landing")}
       />
     );

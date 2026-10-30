@@ -19,7 +19,7 @@ export const COURSE_KEYWORDS = [
 
 export const ADMIN_FEATURES = [
   { icon: "grid", title: "Dashboard", text: "A quick overview of the alumni network — new activity and pending items surface here first." },
-  { icon: "shield", title: "Login & Verification", text: "Every sign-in is checked against the account database, and every new alumni registration is reviewed right here — confirm submitted details, then approve or reject an account before it can reach the survey and dashboard." },
+  { icon: "shield", title: "Login & Verification", text: "Review alumni registrations and follow up on password reset requests." },
   { icon: "users", title: "Manage User Accounts", text: "Create, update, view, and remove staff and alumni accounts, keeping access and security controls enforced system-wide." },
   { icon: "id", title: "View Alumni Information", text: "Browse alumni records — student details, employment history, and self-reported skills — in one monitored view." },
   { icon: "chart", title: "View Survey Results", text: "Review alumni responses to issued surveys to track outcomes, response patterns, and emerging work trends." },

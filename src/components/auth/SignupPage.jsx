@@ -87,7 +87,7 @@ export default function SignupPage({ onSubmit, error, goLogin, goHome }) {
             <span>Login email address</span>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@spc.edu.ph" autoComplete="email" required />
             <small style={{ display: "block", fontSize: "0.72rem", color: "#5f6368", marginTop: 6, lineHeight: 1.4 }}>
-              Use an active email address so we can send your account verification status and important updates.
+              Use an active email address so we can contact you about your account approval.
             </small>
           </label>
 
@@ -117,7 +117,7 @@ export default function SignupPage({ onSubmit, error, goLogin, goHome }) {
           </div>
 
           <p style={{ fontSize: "0.76rem", color: "#6b6b6b", lineHeight: 1.5, margin: 0 }}>
-            An administrator will need to verify your account before you can access the Alumni Survey and other restricted features.
+            The Alumni Affairs Office will review your account and contact you by email once it has been approved.
           </p>
 
           <button type="submit" className="btn-primary btn-block" disabled={busy}>
@@ -141,7 +141,7 @@ export default function SignupPage({ onSubmit, error, goLogin, goHome }) {
             {consentModal === "privacy" ? (
               <>
                 <h4>How your information is used</h4>
-                <p>The Alumni Affairs Office uses the information you provide to create and verify your alumni account, maintain alumni records, and provide alumni services and communications.</p>
+                <p>The Alumni Affairs Office uses the information you provide to create and review your alumni account, maintain alumni records, and provide alumni services and communications.</p>
                 <h4>Information and access</h4>
                 <p>Your profile and survey responses are available to authorized administrators for alumni record management and reporting. Information is not intended for public display through this service.</p>
                 <h4>Your choices</h4>

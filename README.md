@@ -13,9 +13,14 @@ analytics.
 - Alumni can create an account with their name, program, graduation year,
   login email, and password. Supabase Auth handles account identity.
 - New alumni accounts are reviewed by an administrator before access to
-  restricted features is granted. Pending accounts see a verification-status
-  page with a manual status check and automatic refresh; rejected accounts see
-  a separate status page.
+  restricted features is granted. Pending accounts are told that the Alumni
+  Affairs Office will contact them by email after approval; rejected accounts
+  see a separate status page. Approval emails ask alumni to sign in again.
+- Alumni can request a password-recovery link by email and choose a new
+  password after opening it.
+- Admins can view incoming password-recovery requests and mark them handled.
+  The admin queue stores only the email and request/handled timestamps; it
+  never stores passwords or recovery tokens.
 - The initial Alumni Survey modal collects Date of Birth, Contact Number,
   login email, calculated age, and address along with the employment survey.
   These personal-detail fields are intentionally not part of the sign-up form.
@@ -100,6 +105,8 @@ do not guarantee a particular career or hiring outcome.
 1. Install Node.js supported by `package.json` and install dependencies:
    `npm install`
 2. Configure the Supabase URL and anon key in the frontend environment.
+   Add the app origin to Supabase Auth's allowed redirect URLs for password
+   recovery emails to return to the app.
 3. Start the frontend:
    `npm run dev`
 4. Optionally run the Python API:
@@ -117,6 +124,8 @@ frontend environment. These scripts have different scopes:
 - `src/supabase/schema.sql` — full schema for a fresh setup or a complete
   schema refresh. It includes RLS policies and the current table definitions.
   It also drops the retired `course_competencies` table.
+- `src/supabase/password_reset_requests.sql` — focused setup for the
+  admin-only password recovery request queue on an existing database.
 - `src/supabase/ml_schema.sql` — focused additions for an existing base
   schema, including email/job/event description fields and course-competency
   table cleanup.

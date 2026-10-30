@@ -2,7 +2,7 @@ import { useState } from "react";
 import AuthShell from "../layout/AuthShell";
 import Icon from "../ui/Icon";
 
-export default function LoginPage({ onSubmit, error, goSignup, goHome }) {
+export default function LoginPage({ onSubmit, error, message, goSignup, goForgotPassword, goHome }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -37,6 +37,22 @@ export default function LoginPage({ onSubmit, error, goSignup, goHome }) {
             }}
           >
             {error}
+          </div>
+        )}
+        {message && (
+          <div
+            role="status"
+            style={{
+              background: "rgba(36,112,74,0.08)",
+              color: "#246f49",
+              border: "1px solid rgba(36,112,74,0.25)",
+              borderRadius: 8,
+              padding: "8px 14px",
+              fontSize: "0.8rem",
+              marginBottom: 14,
+            }}
+          >
+            {message}
           </div>
         )}
 
@@ -75,7 +91,7 @@ export default function LoginPage({ onSubmit, error, goSignup, goHome }) {
           </label>
           <div className="field-row">
             <label className="checkbox"><input type="checkbox" /> <span>Remember me</span></label>
-            <a href="#" className="text-link" onClick={(e) => e.preventDefault()}>Forgot password?</a>
+            <button type="button" className="text-link" onClick={goForgotPassword}>Forgot password?</button>
           </div>
           <button type="submit" className="btn-primary btn-block" disabled={busy}>
             {busy ? "Signing in…" : (<><span>Sign in</span> <Icon name="arrow" size={16} /></>)}

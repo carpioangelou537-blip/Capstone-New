@@ -1,21 +1,16 @@
 import Icon from "../ui/Icon";
 
-export function PendingVerificationPage({ onRefresh, onLogout, autoCheck }) {
+export function PendingVerificationPage({ onLogout }) {
   return (
     <div className="status-page">
       <div className="status-card">
         <div className="status-icon pending"><Icon name="clock" size={30} /></div>
-        <h2>Check Verification Status</h2>
-        <p><strong>Current status: Pending review.</strong> An administrator needs to verify your account before you can access the Alumni Survey and other restricted features.</p>
+        <h2>Your account is under review</h2>
+        <p><strong>Thanks for registering.</strong> The Alumni Affairs Office will review your account before granting access to the Alumni Survey and other restricted features.</p>
         <p style={{ fontSize: "0.8rem" }}>
-          You're fully signed in — the moment the Alumni Affairs Office approves your account, this page will
-          automatically let you into the dashboard and open the alumni survey for you to complete.
-          {autoCheck ? " Still waiting… we'll keep checking." : " Checking every few seconds…"}
+          We’ll contact you by email once your account is approved. Please sign out and sign in again after receiving our message.
         </p>
         <div className="status-actions">
-          <button className="btn-ghost" style={{ color: "var(--maroon-deep)" }} onClick={onRefresh}>
-            <Icon name="arrow" size={14} /> Check status now
-          </button>
           <button className="text-link" onClick={onLogout}>Sign out</button>
         </div>
       </div>

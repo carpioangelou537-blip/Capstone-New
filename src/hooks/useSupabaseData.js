@@ -28,6 +28,7 @@ export function useSupabaseData(user, refreshKey = 0) {
   const [courseRecommendations, setCourseRecommendations] = useState(SEED_COURSE_RECOMMENDATIONS);
   const [jobApplications, setJobApplications] = useState(SEED_JOB_APPLICATIONS);
   const [adminActivityLogs, setAdminActivityLogs] = useState(SEED_ACTIVITY_LOGS);
+  const [passwordResetRequests, setPasswordResetRequests] = useState([]);
   const [dbStatus, setDbStatus] = useState("idle");
   const [loading, setLoading] = useState(false);
 
@@ -46,6 +47,7 @@ export function useSupabaseData(user, refreshKey = 0) {
       setCourseRecommendations(SEED_COURSE_RECOMMENDATIONS);
       setJobApplications(SEED_JOB_APPLICATIONS);
       setAdminActivityLogs(SEED_ACTIVITY_LOGS);
+      setPasswordResetRequests([]);
       setDbStatus("idle");
       setLoading(false);
       return () => {
@@ -68,6 +70,7 @@ export function useSupabaseData(user, refreshKey = 0) {
         setCourseRecommendations(remote.courseRecommendations);
         setJobApplications(remote.jobApplications);
         setAdminActivityLogs(remote.adminActivityLogs);
+        setPasswordResetRequests(remote.passwordResetRequests);
         setDbStatus("connected");
       } catch {
         if (cancelled) return;
@@ -80,6 +83,7 @@ export function useSupabaseData(user, refreshKey = 0) {
         setCourseRecommendations([]);
         setJobApplications([]);
         setAdminActivityLogs([]);
+        setPasswordResetRequests([]);
         setDbStatus("offline");
       } finally {
         if (!cancelled) setLoading(false);
@@ -110,6 +114,7 @@ export function useSupabaseData(user, refreshKey = 0) {
     courseRecommendations,
     jobApplications,
     adminActivityLogs,
+    passwordResetRequests,
     me,
     loading,
     dbStatus,
@@ -122,5 +127,6 @@ export function useSupabaseData(user, refreshKey = 0) {
     setCourseRecommendations,
     setJobApplications,
     setAdminActivityLogs,
+    setPasswordResetRequests,
   };
 }

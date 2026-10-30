@@ -16,6 +16,25 @@ export async function signIn(email, password) {
   return { user: data?.user || null, session: data?.session || null, error };
 }
 
+export async function requestPasswordReset(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin,
+  });
+  return { error };
+}
+
+export async function recordPasswordResetRequest(email) {
+  const { error } = await supabase
+    .from("password_reset_requests")
+    .insert({ email });
+  if (error) throw error;
+}
+
+export async function updatePassword(password) {
+  const { data, error } = await supabase.auth.updateUser({ password });
+  return { user: data?.user || null, error };
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   return { error };
@@ -32,8 +51,8 @@ export async function updateAuthEmail(email) {
 }
 
 export function onAuthChange(callback) {
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session?.user || null);
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    callback(session?.user || null, event);
   });
 
   return data?.subscription || null;
@@ -376,8 +395,22 @@ export async function fetchAdminActivityLogs() {
   return (data || []).map(rowToActivity);
 }
 
+export async function fetchPasswordResetRequests() {
+  const { data, error } = await supabase
+    .from("password_reset_requests")
+    .select("id, email, requested_at, handled_at")
+    .order("requested_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((row) => ({
+    id: row.id,
+    email: row.email,
+    requestedAt: row.requested_at,
+    handledAt: row.handled_at,
+  }));
+}
+
 export async function fetchAll() {
-  const [alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, jobApplications, adminActivityLogs] =
+  const [alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, jobApplications, adminActivityLogs, passwordResetRequests] =
     await Promise.all([
       fetchAlumni(),
       fetchJobs(),
@@ -388,11 +421,21 @@ export async function fetchAll() {
       fetchCourseRecommendations(),
       fetchJobApplications(),
       fetchAdminActivityLogs(),
+      fetchPasswordResetRequests(),
     ]);
-  return { alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, jobApplications, adminActivityLogs };
+  return { alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, jobApplications, adminActivityLogs, passwordResetRequests };
 }
 
 /* ------------------------------ writes ------------------------------ */
+
+export async function markPasswordResetRequestHandled(id) {
+  const { error } = await supabase
+    .from("password_reset_requests")
+    .update({ handled_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("handled_at", null);
+  if (error) throw error;
+}
 
 export async function updateAlumnus(id, patch) {
   const row = alumnusToRow(patch);

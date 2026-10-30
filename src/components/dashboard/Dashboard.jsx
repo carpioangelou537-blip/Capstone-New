@@ -28,6 +28,7 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
     notifications,
     surveyResponses,
     skillsHistory,
+    passwordResetRequests,
     actions,
   } = domain;
   const safeMe = me || {
@@ -178,7 +179,9 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
   function getBadge(title) {
     if (seenFeatures.includes(title) && !(title === "Manage Notifications" && unreadNotificationCount > 0)) return null;
     if (role === "admin") {
-      if (title === "Login & Verification") return pendingVerifications;
+      if (title === "Login & Verification") {
+        return pendingVerifications + passwordResetRequests.filter((request) => !request.handledAt).length;
+      }
       if (title === "Manage User Accounts") return alumni.length;
       if (title === "View Alumni Information") return alumni.length;
       if (title === "View Survey Results") return surveyedCount;
@@ -203,7 +206,15 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
         case "Dashboard":
           return <AdminDashboardOverview alumni={alumni} jobs={jobs} events={events} notifications={notifications} onNavigate={goToFeature} />;
         case "Login & Verification":
-          return <LoginAndVerificationPanel alumni={alumni} onApprove={actions.approveAlumni} onReject={actions.rejectAlumni} />;
+          return (
+            <LoginAndVerificationPanel
+              alumni={alumni}
+              passwordResetRequests={passwordResetRequests}
+              onApprove={actions.approveAlumni}
+              onReject={actions.rejectAlumni}
+              onMarkPasswordResetRequestHandled={actions.markPasswordResetRequestHandled}
+            />
+          );
         case "Manage User Accounts":
           return <ManageUsersPanel alumni={alumni} onAdd={actions.addAlumni} onRemove={actions.removeAlumni} />;
         case "View Alumni Information":
