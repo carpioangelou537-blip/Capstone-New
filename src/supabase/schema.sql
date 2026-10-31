@@ -12,7 +12,6 @@
 --    alumni_skills_history    -> timestamped skill snapshots
 --    course_recommendations   -> AI-generated skill/course suggestions
 --    admin_activity_logs      -> audit trail of every admin action
---    password_reset_requests  -> admin-only queue for password recovery follow-up
 --
 --  Security model:
 --    - Admin access requires trusted Supabase app_metadata.role = 'admin'.
@@ -207,49 +206,9 @@ create table if not exists public.admin_activity_logs (
   created_at     timestamptz default timezone('utc', now())
 );
 
--- Password recovery links are sent by Supabase Auth. This table only tracks
--- that a user requested follow-up; it never stores passwords or reset tokens.
-create table if not exists public.password_reset_requests (
-  id           uuid primary key default gen_random_uuid(),
-  email        text not null,
-  requested_at timestamptz not null default timezone('utc', now()),
-  handled_at   timestamptz,
-  handled_by   uuid references auth.users(id) on delete set null
-);
-
-alter table public.password_reset_requests enable row level security;
-
-create or replace function public.set_password_reset_request_fields()
-returns trigger
-language plpgsql
-as $$
-begin
-  if tg_op = 'INSERT' then
-    new.requested_at = timezone('utc', now());
-    new.handled_at = null;
-    new.handled_by = null;
-  else
-    new.email = old.email;
-    new.requested_at = old.requested_at;
-    if old.handled_at is not null then
-      new.handled_at = old.handled_at;
-      new.handled_by = old.handled_by;
-    elsif new.handled_at is not null then
-      new.handled_at = timezone('utc', now());
-      new.handled_by = auth.uid();
-    else
-      new.handled_by = null;
-    end if;
-  end if;
-  return new;
-end;
-$$;
-
-drop trigger if exists trg_password_reset_request_fields on public.password_reset_requests;
-create trigger trg_password_reset_request_fields
-before insert or update on public.password_reset_requests
-for each row
-execute function public.set_password_reset_request_fields();
+-- Password recovery is handled directly through Supabase Auth.
+drop table if exists public.password_reset_requests;
+drop function if exists public.set_password_reset_request_fields();
 
 -- Normalize legacy text IDs before adding real foreign-key relationships.
 drop index if exists public.alumni_user_id_unique_idx;
@@ -419,7 +378,6 @@ alter table public.survey_responses       enable row level security;
 alter table public.alumni_skills_history  enable row level security;
 alter table public.course_recommendations enable row level security;
 alter table public.admin_activity_logs    enable row level security;
-alter table public.password_reset_requests enable row level security;
 
 -- Legacy demo policies from the first schema version — dropped so the
 -- new authenticated model below takes over cleanly.
@@ -446,7 +404,6 @@ drop policy if exists "read survey_responses"       on public.survey_responses;
 drop policy if exists "read alumni_skills_history"  on public.alumni_skills_history;
 drop policy if exists "read course_recommendations" on public.course_recommendations;
 drop policy if exists "read admin_activity_logs"    on public.admin_activity_logs;
-drop policy if exists "read password_reset_requests" on public.password_reset_requests;
 
 drop policy if exists "signed in insert alumni"                 on public.alumni;
 drop policy if exists "signed in update alumni"                 on public.alumni;
@@ -472,9 +429,6 @@ drop policy if exists "signed in delete course_recommendations" on public.course
 drop policy if exists "signed in insert admin_activity_logs"    on public.admin_activity_logs;
 drop policy if exists "signed in update admin_activity_logs"    on public.admin_activity_logs;
 drop policy if exists "signed in delete admin_activity_logs"    on public.admin_activity_logs;
-drop policy if exists "public insert password_reset_requests" on public.password_reset_requests;
-drop policy if exists "admin read password_reset_requests" on public.password_reset_requests;
-drop policy if exists "admin update password_reset_requests" on public.password_reset_requests;
 
 -- The admin role is trusted only when stored in Supabase app_metadata.
 -- Public profile and account-linked data are visible only to their owner/admin.
@@ -491,27 +445,9 @@ create policy "read course_recommendations" on public.course_recommendations for
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 create policy "read admin_activity_logs"    on public.admin_activity_logs    for select
   using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
-create policy "admin read password_reset_requests" on public.password_reset_requests for select
-  to authenticated using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
-create policy "public insert password_reset_requests" on public.password_reset_requests for insert
-  to anon, authenticated
-  with check (
-    char_length(email) between 3 and 320
-    and
-    email ~* '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'
-    and handled_at is null
-    and handled_by is null
-  );
-create policy "admin update password_reset_requests" on public.password_reset_requests for update
-  to authenticated
-  using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
-  with check (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
 revoke all on public.alumni, public.survey_responses, public.alumni_skills_history,
   public.course_recommendations, public.admin_activity_logs from anon;
-revoke all on public.password_reset_requests from public, anon, authenticated;
-grant insert on public.password_reset_requests to anon, authenticated;
-grant select, update on public.password_reset_requests to authenticated;
 grant select on public.jobs, public.events, public.notifications to anon, authenticated;
 grant select, insert, update, delete on public.alumni, public.jobs, public.events,
   public.notifications, public.survey_responses, public.alumni_skills_history,

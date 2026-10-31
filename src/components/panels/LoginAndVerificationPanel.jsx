@@ -4,16 +4,12 @@ import { VerifyPill } from "../ui/Pills";
 
 export default function LoginAndVerificationPanel({
   alumni,
-  passwordResetRequests,
   onApprove,
   onReject,
-  onMarkPasswordResetRequestHandled,
 }) {
   const pending = alumni.filter((a) => a.verificationStatus === "pending");
   const verified = alumni.filter((a) => a.verificationStatus === "verified").length;
   const reviewed = alumni.filter((a) => a.verificationStatus !== "pending");
-  const pendingResetRequests = passwordResetRequests.filter((request) => !request.handledAt);
-  const handledResetRequests = passwordResetRequests.filter((request) => request.handledAt);
 
   return (
     <div className="panel-block">
@@ -74,52 +70,6 @@ export default function LoginAndVerificationPanel({
         </table>
       </div>
 
-      <div className="overview-block-title" style={{ marginTop: 24 }}>
-        Password reset requests ({pendingResetRequests.length})
-      </div>
-      <div className="list-block" style={{ marginBottom: 22 }}>
-        {pendingResetRequests.length === 0 && (
-          <EmptyState icon="key" text="No password reset requests are waiting for follow-up." />
-        )}
-        {pendingResetRequests.map((request) => (
-          <div className="list-item" key={request.id}>
-            <div className="list-item-main">
-              <div className="list-item-title">{request.email}</div>
-              <div className="list-item-sub">
-                Requested {request.requestedAt ? new Date(request.requestedAt).toLocaleString() : "—"}
-              </div>
-            </div>
-            <div className="list-item-actions">
-              <button
-                className="btn-ghost"
-                onClick={() => onMarkPasswordResetRequestHandled(request.id)}
-              >
-                <Icon name="check" size={14} /> Mark handled
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {handledResetRequests.length > 0 && (
-        <>
-          <div className="overview-block-title">Handled requests ({handledResetRequests.length})</div>
-          <div className="list-block">
-            {handledResetRequests.map((request) => (
-              <div className="list-item" key={request.id}>
-                <div className="list-item-main">
-                  <div className="list-item-title">{request.email}</div>
-                  <div className="list-item-sub">
-                    Requested {request.requestedAt ? new Date(request.requestedAt).toLocaleString() : "—"}
-                    {" · "}Handled {new Date(request.handledAt).toLocaleString()}
-                  </div>
-                </div>
-                <span className="pill ok">Handled</span>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }

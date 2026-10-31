@@ -65,7 +65,6 @@ export default function App() {
     skillsHistory,
     courseRecommendations,
     adminActivityLogs,
-    passwordResetRequests,
     setAlumni,
     setJobs,
     setEvents,
@@ -73,7 +72,6 @@ export default function App() {
     setSurveyResponses,
     setCourseRecommendations,
     setAdminActivityLogs,
-    setPasswordResetRequests,
     loading,
     dbStatus,
     me,
@@ -260,12 +258,6 @@ export default function App() {
     if (error) {
       setAuthError(error.message);
       return false;
-    }
-    try {
-      await api.recordPasswordResetRequest(email.toLowerCase());
-    } catch (error) {
-      console.error("Password recovery was requested, but the admin request could not be recorded.", error);
-      setAuthError("The recovery email was requested, but we couldn't notify the admin queue. Please contact the Alumni Affairs Office if you need help.");
     }
     return true;
   }
@@ -570,26 +562,6 @@ export default function App() {
       addToast("Notification updated.");
       return true;
     },
-    async markPasswordResetRequestHandled(id) {
-      const request = passwordResetRequests.find((item) => item.id === id);
-      if (!request) {
-        addToast("Could not find that password reset request. Refresh and try again.");
-        return false;
-      }
-      try {
-        await api.markPasswordResetRequestHandled(id);
-      } catch (error) {
-        console.error("Could not mark the password reset request handled.", error);
-        addToast(`Could not update the request: ${error.message || "database request failed."}`);
-        return false;
-      }
-      setPasswordResetRequests((requests) => requests.map((item) => (
-        item.id === id ? { ...item, handledAt: new Date().toISOString() } : item
-      )));
-      actions.logAdmin("handled_password_reset_request", "Password reset request");
-      addToast("Password reset request marked handled.");
-      return true;
-    },
     async deleteNotification(id) {
       const notification = notifications.find((item) => item.id === id);
       if (!notification) {
@@ -619,7 +591,6 @@ export default function App() {
     skillsHistory,
     courseRecommendations,
     adminActivityLogs,
-    passwordResetRequests,
     actions,
   };
 

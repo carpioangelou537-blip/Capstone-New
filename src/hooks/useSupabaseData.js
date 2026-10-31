@@ -26,7 +26,6 @@ export function useSupabaseData(user, refreshKey = 0) {
   const [skillsHistory, setSkillsHistory] = useState(SEED_SKILLS_HISTORY);
   const [courseRecommendations, setCourseRecommendations] = useState(SEED_COURSE_RECOMMENDATIONS);
   const [adminActivityLogs, setAdminActivityLogs] = useState(SEED_ACTIVITY_LOGS);
-  const [passwordResetRequests, setPasswordResetRequests] = useState([]);
   const [dbStatus, setDbStatus] = useState("idle");
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +43,6 @@ export function useSupabaseData(user, refreshKey = 0) {
       setSkillsHistory(SEED_SKILLS_HISTORY);
       setCourseRecommendations(SEED_COURSE_RECOMMENDATIONS);
       setAdminActivityLogs(SEED_ACTIVITY_LOGS);
-      setPasswordResetRequests([]);
       setDbStatus("idle");
       setLoading(false);
       return () => {
@@ -66,7 +64,6 @@ export function useSupabaseData(user, refreshKey = 0) {
         setSkillsHistory(remote.skillsHistory);
         setCourseRecommendations(remote.courseRecommendations);
         setAdminActivityLogs(remote.adminActivityLogs);
-        setPasswordResetRequests(remote.passwordResetRequests);
         setDbStatus("connected");
       } catch {
         if (cancelled) return;
@@ -78,7 +75,6 @@ export function useSupabaseData(user, refreshKey = 0) {
         setSkillsHistory([]);
         setCourseRecommendations([]);
         setAdminActivityLogs([]);
-        setPasswordResetRequests([]);
         setDbStatus("offline");
       } finally {
         if (!cancelled) setLoading(false);
@@ -108,7 +104,6 @@ export function useSupabaseData(user, refreshKey = 0) {
     skillsHistory,
     courseRecommendations,
     adminActivityLogs,
-    passwordResetRequests,
     me,
     loading,
     dbStatus,
@@ -120,6 +115,5 @@ export function useSupabaseData(user, refreshKey = 0) {
     setSkillsHistory,
     setCourseRecommendations,
     setAdminActivityLogs,
-    setPasswordResetRequests,
   };
 }

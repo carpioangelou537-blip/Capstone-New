@@ -23,13 +23,6 @@ export async function requestPasswordReset(email) {
   return { error };
 }
 
-export async function recordPasswordResetRequest(email) {
-  const { error } = await supabase
-    .from("password_reset_requests")
-    .insert({ email });
-  if (error) throw error;
-}
-
 export async function updatePassword(password) {
   const { data, error } = await supabase.auth.updateUser({ password });
   return { user: data?.user || null, error };
@@ -365,22 +358,8 @@ export async function fetchAdminActivityLogs() {
   return (data || []).map(rowToActivity);
 }
 
-export async function fetchPasswordResetRequests() {
-  const { data, error } = await supabase
-    .from("password_reset_requests")
-    .select("id, email, requested_at, handled_at")
-    .order("requested_at", { ascending: false });
-  if (error) throw error;
-  return (data || []).map((row) => ({
-    id: row.id,
-    email: row.email,
-    requestedAt: row.requested_at,
-    handledAt: row.handled_at,
-  }));
-}
-
 export async function fetchAll() {
-  const [alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, adminActivityLogs, passwordResetRequests] =
+  const [alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, adminActivityLogs] =
     await Promise.all([
       fetchAlumni(),
       fetchJobs(),
@@ -390,21 +369,11 @@ export async function fetchAll() {
       fetchSkillsHistory(),
       fetchCourseRecommendations(),
       fetchAdminActivityLogs(),
-      fetchPasswordResetRequests(),
     ]);
-  return { alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, adminActivityLogs, passwordResetRequests };
+  return { alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, adminActivityLogs };
 }
 
 /* ------------------------------ writes ------------------------------ */
-
-export async function markPasswordResetRequestHandled(id) {
-  const { error } = await supabase
-    .from("password_reset_requests")
-    .update({ handled_at: new Date().toISOString() })
-    .eq("id", id)
-    .is("handled_at", null);
-  if (error) throw error;
-}
 
 export async function updateAlumnus(id, patch) {
   const row = alumnusToRow(patch);

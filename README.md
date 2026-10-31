@@ -124,8 +124,8 @@ frontend environment. These scripts have different scopes:
 - `src/supabase/schema.sql` — full schema for a fresh setup or a complete
   schema refresh. It includes RLS policies and the current table definitions.
   It also drops the retired `course_competencies` table.
-- `src/supabase/password_reset_requests.sql` — focused setup for the
-  admin-only password recovery request queue on an existing database.
+- `src/supabase/password_reset_requests.sql` — removes the retired admin
+  password recovery request queue from an existing database.
 - `src/supabase/ml_schema.sql` — focused additions for an existing base
   schema, including email/job/event description fields and course-competency
   table cleanup.

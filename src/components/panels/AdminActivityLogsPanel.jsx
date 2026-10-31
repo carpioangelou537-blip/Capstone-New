@@ -11,7 +11,6 @@ const ACTION_LABELS = {
   published_event: { icon: "calendar", label: "Published event" },
   removed_event: { icon: "trash", label: "Removed event" },
   sent_notification: { icon: "bell", label: "Sent notification" },
-  handled_password_reset_request: { icon: "key", label: "Handled password reset request" },
 };
 
 export default function AdminActivityLogsPanel({ adminActivityLogs, alumni }) {

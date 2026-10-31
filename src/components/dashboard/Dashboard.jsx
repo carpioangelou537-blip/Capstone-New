@@ -28,7 +28,6 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
     notifications,
     surveyResponses,
     skillsHistory,
-    passwordResetRequests,
     actions,
   } = domain;
   const safeMe = me || {
@@ -180,7 +179,7 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
     if (seenFeatures.includes(title) && !(title === "Manage Notifications" && unreadNotificationCount > 0)) return null;
     if (role === "admin") {
       if (title === "Login & Verification") {
-        return pendingVerifications + passwordResetRequests.filter((request) => !request.handledAt).length;
+        return pendingVerifications;
       }
       if (title === "Manage User Accounts") return alumni.length;
       if (title === "View Alumni Information") return alumni.length;
@@ -209,10 +208,8 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
           return (
             <LoginAndVerificationPanel
               alumni={alumni}
-              passwordResetRequests={passwordResetRequests}
               onApprove={actions.approveAlumni}
               onReject={actions.rejectAlumni}
-              onMarkPasswordResetRequestHandled={actions.markPasswordResetRequestHandled}
             />
           );
         case "Manage User Accounts":
