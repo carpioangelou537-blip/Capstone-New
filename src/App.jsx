@@ -63,14 +63,14 @@ export default function App() {
     notifications,
     surveyResponses,
     skillsHistory,
-    courseRecommendations,
+    skillRecommendations,
     adminActivityLogs,
     setAlumni,
     setJobs,
     setEvents,
     setNotifications,
     setSurveyResponses,
-    setCourseRecommendations,
+    setSkillRecommendations,
     setAdminActivityLogs,
     loading,
     dbStatus,
@@ -390,8 +390,8 @@ export default function App() {
               : `Requested across ${g.demand} current postings`,
           createdAt: now,
         }));
-        setCourseRecommendations(recRows);
-        api.replaceCourseRecommendations(me.userId, recRows).catch(() => {});
+        setSkillRecommendations(recRows);
+        api.replaceSkillRecommendations(me.userId, recRows).catch(() => {});
       }
       addToast("Survey submitted — thanks for the update!");
     },
@@ -589,7 +589,7 @@ export default function App() {
     notifications,
     surveyResponses,
     skillsHistory,
-    courseRecommendations,
+    skillRecommendations,
     adminActivityLogs,
     actions,
   };

@@ -6,7 +6,7 @@ import {
   SEED_NOTIFICATIONS,
   SEED_SURVEY_RESPONSES,
   SEED_SKILLS_HISTORY,
-  SEED_COURSE_RECOMMENDATIONS,
+  SEED_SKILL_RECOMMENDATIONS,
   SEED_ACTIVITY_LOGS,
 } from "../lib/seed";
 import * as api from "../lib/supabaseService";
@@ -24,7 +24,7 @@ export function useSupabaseData(user, refreshKey = 0) {
   const [notifications, setNotifications] = useState(SEED_NOTIFICATIONS);
   const [surveyResponses, setSurveyResponses] = useState(SEED_SURVEY_RESPONSES);
   const [skillsHistory, setSkillsHistory] = useState(SEED_SKILLS_HISTORY);
-  const [courseRecommendations, setCourseRecommendations] = useState(SEED_COURSE_RECOMMENDATIONS);
+  const [skillRecommendations, setSkillRecommendations] = useState(SEED_SKILL_RECOMMENDATIONS);
   const [adminActivityLogs, setAdminActivityLogs] = useState(SEED_ACTIVITY_LOGS);
   const [dbStatus, setDbStatus] = useState("idle");
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ export function useSupabaseData(user, refreshKey = 0) {
       setNotifications(SEED_NOTIFICATIONS);
       setSurveyResponses(SEED_SURVEY_RESPONSES);
       setSkillsHistory(SEED_SKILLS_HISTORY);
-      setCourseRecommendations(SEED_COURSE_RECOMMENDATIONS);
+      setSkillRecommendations(SEED_SKILL_RECOMMENDATIONS);
       setAdminActivityLogs(SEED_ACTIVITY_LOGS);
       setDbStatus("idle");
       setLoading(false);
@@ -62,7 +62,7 @@ export function useSupabaseData(user, refreshKey = 0) {
         setNotifications(remote.notifications);
         setSurveyResponses(remote.surveyResponses);
         setSkillsHistory(remote.skillsHistory);
-        setCourseRecommendations(remote.courseRecommendations);
+        setSkillRecommendations(remote.skillRecommendations);
         setAdminActivityLogs(remote.adminActivityLogs);
         setDbStatus("connected");
       } catch {
@@ -73,7 +73,7 @@ export function useSupabaseData(user, refreshKey = 0) {
         setNotifications([]);
         setSurveyResponses([]);
         setSkillsHistory([]);
-        setCourseRecommendations([]);
+        setSkillRecommendations([]);
         setAdminActivityLogs([]);
         setDbStatus("offline");
       } finally {
@@ -102,7 +102,7 @@ export function useSupabaseData(user, refreshKey = 0) {
     notifications,
     surveyResponses,
     skillsHistory,
-    courseRecommendations,
+    skillRecommendations,
     adminActivityLogs,
     me,
     loading,
@@ -113,7 +113,7 @@ export function useSupabaseData(user, refreshKey = 0) {
     setNotifications,
     setSurveyResponses,
     setSkillsHistory,
-    setCourseRecommendations,
+    setSkillRecommendations,
     setAdminActivityLogs,
   };
 }

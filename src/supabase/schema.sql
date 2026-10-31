@@ -10,7 +10,7 @@
 --    alumni                   -> core identity / verification / profile
 --    survey_responses         -> latest employment survey per alumnus
 --    alumni_skills_history    -> timestamped skill snapshots
---    course_recommendations   -> AI-generated skill/course suggestions
+--    skill_recommendations    -> AI-generated skill suggestions
 --    admin_activity_logs      -> audit trail of every admin action
 --
 --  Security model:
@@ -22,6 +22,35 @@
 
 -- This feature was removed; discard its old table when upgrading.
 drop table if exists public.course_competencies;
+
+-- Rename the legacy table without losing recommendation data.
+do $$
+begin
+  if to_regclass('public.skill_recommendations') is not null
+    and to_regclass('public.course_recommendations') is not null then
+    raise exception 'Both skill_recommendations and course_recommendations exist; merge the legacy data before applying this schema.';
+  end if;
+
+  if to_regclass('public.skill_recommendations') is null
+    and to_regclass('public.course_recommendations') is not null then
+    alter table public.course_recommendations rename to skill_recommendations;
+  end if;
+
+  if exists (
+    select 1 from pg_constraint
+    where conrelid = to_regclass('public.skill_recommendations')
+      and conname = 'course_recommendations_user_id_alumni_fkey'
+  ) and not exists (
+    select 1 from pg_constraint
+    where conrelid = to_regclass('public.skill_recommendations')
+      and conname = 'skill_recommendations_user_id_alumni_fkey'
+  ) then
+    alter table public.skill_recommendations
+      rename constraint course_recommendations_user_id_alumni_fkey
+      to skill_recommendations_user_id_alumni_fkey;
+  end if;
+end;
+$$;
 
 -- ------------------------------- helpers -------------------------------
 create or replace function public.set_updated_at()
@@ -183,10 +212,10 @@ create table if not exists public.alumni_skills_history (
   created_at    timestamptz default timezone('utc', now())
 );
 
--- ----------------------- course_recommendations ------------------------
--- AI-generated skill/course suggestions per alumnus, regenerated when a
+-- ----------------------- skill_recommendations ------------------------
+-- AI-generated skill suggestions per alumnus, regenerated when a
 -- survey is submitted.
-create table if not exists public.course_recommendations (
+create table if not exists public.skill_recommendations (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid,
   skill      text not null,
@@ -215,7 +244,8 @@ drop index if exists public.alumni_user_id_unique_idx;
 drop policy if exists "read alumni" on public.alumni;
 drop policy if exists "read survey_responses" on public.survey_responses;
 drop policy if exists "read alumni_skills_history" on public.alumni_skills_history;
-drop policy if exists "read course_recommendations" on public.course_recommendations;
+drop policy if exists "read skill_recommendations" on public.skill_recommendations;
+drop policy if exists "read course_recommendations" on public.skill_recommendations;
 drop policy if exists "signed in insert alumni" on public.alumni;
 drop policy if exists "signed in update alumni" on public.alumni;
 drop policy if exists "signed in delete alumni" on public.alumni;
@@ -225,9 +255,12 @@ drop policy if exists "signed in delete survey_responses" on public.survey_respo
 drop policy if exists "signed in insert alumni_skills_history" on public.alumni_skills_history;
 drop policy if exists "signed in update alumni_skills_history" on public.alumni_skills_history;
 drop policy if exists "signed in delete alumni_skills_history" on public.alumni_skills_history;
-drop policy if exists "signed in insert course_recommendations" on public.course_recommendations;
-drop policy if exists "signed in update course_recommendations" on public.course_recommendations;
-drop policy if exists "signed in delete course_recommendations" on public.course_recommendations;
+drop policy if exists "signed in insert skill_recommendations" on public.skill_recommendations;
+drop policy if exists "signed in update skill_recommendations" on public.skill_recommendations;
+drop policy if exists "signed in delete skill_recommendations" on public.skill_recommendations;
+drop policy if exists "signed in insert course_recommendations" on public.skill_recommendations;
+drop policy if exists "signed in update course_recommendations" on public.skill_recommendations;
+drop policy if exists "signed in delete course_recommendations" on public.skill_recommendations;
 do $$
 declare
   item record;
@@ -239,7 +272,7 @@ begin
       ('alumni', 'user_id'),
       ('survey_responses', 'user_id'),
       ('alumni_skills_history', 'user_id'),
-      ('course_recommendations', 'user_id'),
+      ('skill_recommendations', 'user_id'),
       ('admin_activity_logs', 'admin_user_id')
     ) as columns_to_convert(table_name, column_name)
   loop
@@ -315,9 +348,10 @@ before insert on public.alumni_skills_history
 for each row
 execute function public.attach_auth_user_id();
 
-drop trigger if exists trg_course_recommendations_auth_user_id on public.course_recommendations;
-create trigger trg_course_recommendations_auth_user_id
-before insert on public.course_recommendations
+drop trigger if exists trg_course_recommendations_auth_user_id on public.skill_recommendations;
+drop trigger if exists trg_skill_recommendations_auth_user_id on public.skill_recommendations;
+create trigger trg_skill_recommendations_auth_user_id
+before insert on public.skill_recommendations
 for each row
 execute function public.attach_auth_user_id();
 
@@ -376,7 +410,7 @@ alter table public.events                 enable row level security;
 alter table public.notifications          enable row level security;
 alter table public.survey_responses       enable row level security;
 alter table public.alumni_skills_history  enable row level security;
-alter table public.course_recommendations enable row level security;
+alter table public.skill_recommendations enable row level security;
 alter table public.admin_activity_logs    enable row level security;
 
 -- Legacy demo policies from the first schema version — dropped so the
@@ -402,7 +436,7 @@ drop policy if exists "read events"                 on public.events;
 drop policy if exists "read notifications"          on public.notifications;
 drop policy if exists "read survey_responses"       on public.survey_responses;
 drop policy if exists "read alumni_skills_history"  on public.alumni_skills_history;
-drop policy if exists "read course_recommendations" on public.course_recommendations;
+drop policy if exists "read skill_recommendations" on public.skill_recommendations;
 drop policy if exists "read admin_activity_logs"    on public.admin_activity_logs;
 
 drop policy if exists "signed in insert alumni"                 on public.alumni;
@@ -423,9 +457,9 @@ drop policy if exists "signed in delete survey_responses"       on public.survey
 drop policy if exists "signed in insert alumni_skills_history"  on public.alumni_skills_history;
 drop policy if exists "signed in update alumni_skills_history"  on public.alumni_skills_history;
 drop policy if exists "signed in delete alumni_skills_history"  on public.alumni_skills_history;
-drop policy if exists "signed in insert course_recommendations" on public.course_recommendations;
-drop policy if exists "signed in update course_recommendations" on public.course_recommendations;
-drop policy if exists "signed in delete course_recommendations" on public.course_recommendations;
+drop policy if exists "signed in insert skill_recommendations" on public.skill_recommendations;
+drop policy if exists "signed in update skill_recommendations" on public.skill_recommendations;
+drop policy if exists "signed in delete skill_recommendations" on public.skill_recommendations;
 drop policy if exists "signed in insert admin_activity_logs"    on public.admin_activity_logs;
 drop policy if exists "signed in update admin_activity_logs"    on public.admin_activity_logs;
 drop policy if exists "signed in delete admin_activity_logs"    on public.admin_activity_logs;
@@ -441,17 +475,17 @@ create policy "read survey_responses"       on public.survey_responses       for
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 create policy "read alumni_skills_history"  on public.alumni_skills_history  for select
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
-create policy "read course_recommendations" on public.course_recommendations for select
+create policy "read skill_recommendations" on public.skill_recommendations for select
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 create policy "read admin_activity_logs"    on public.admin_activity_logs    for select
   using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
 revoke all on public.alumni, public.survey_responses, public.alumni_skills_history,
-  public.course_recommendations, public.admin_activity_logs from anon;
+  public.skill_recommendations, public.admin_activity_logs from anon;
 grant select on public.jobs, public.events, public.notifications to anon, authenticated;
 grant select, insert, update, delete on public.alumni, public.jobs, public.events,
   public.notifications, public.survey_responses, public.alumni_skills_history,
-  public.course_recommendations, public.admin_activity_logs
+  public.skill_recommendations, public.admin_activity_logs
   to authenticated;
 
 create policy "signed in insert alumni" on public.alumni for insert
@@ -503,12 +537,12 @@ create policy "signed in update alumni_skills_history" on public.alumni_skills_h
 create policy "signed in delete alumni_skills_history" on public.alumni_skills_history for delete
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
-create policy "signed in insert course_recommendations" on public.course_recommendations for insert
+create policy "signed in insert skill_recommendations" on public.skill_recommendations for insert
   with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
-create policy "signed in update course_recommendations" on public.course_recommendations for update
+create policy "signed in update skill_recommendations" on public.skill_recommendations for update
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
   with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
-create policy "signed in delete course_recommendations" on public.course_recommendations for delete
+create policy "signed in delete skill_recommendations" on public.skill_recommendations for delete
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
 create policy "signed in insert admin_activity_logs" on public.admin_activity_logs for insert
@@ -608,7 +642,7 @@ where history.user_id is not null
 and not exists (
   select 1 from public.alumni as alumnus where alumnus.user_id = history.user_id
 );
-update public.course_recommendations as recommendation
+update public.skill_recommendations as recommendation
 set user_id = null
 where recommendation.user_id is not null
 and not exists (
@@ -636,8 +670,8 @@ begin
     alter table public.alumni_skills_history add constraint alumni_skills_history_user_id_alumni_fkey
       foreign key (user_id) references public.alumni(user_id) on delete cascade not valid;
   end if;
-  if not exists (select 1 from pg_constraint where conrelid = 'public.course_recommendations'::regclass and conname = 'course_recommendations_user_id_alumni_fkey') then
-    alter table public.course_recommendations add constraint course_recommendations_user_id_alumni_fkey
+  if not exists (select 1 from pg_constraint where conrelid = 'public.skill_recommendations'::regclass and conname = 'skill_recommendations_user_id_alumni_fkey') then
+    alter table public.skill_recommendations add constraint skill_recommendations_user_id_alumni_fkey
       foreign key (user_id) references public.alumni(user_id) on delete cascade not valid;
   end if;
   if not exists (select 1 from pg_constraint where conrelid = 'public.admin_activity_logs'::regclass and conname = 'admin_activity_logs_admin_user_id_auth_users_fkey') then
@@ -662,7 +696,7 @@ $$;
 alter table public.alumni validate constraint alumni_user_id_auth_users_fkey;
 alter table public.survey_responses validate constraint survey_responses_user_id_alumni_fkey;
 alter table public.alumni_skills_history validate constraint alumni_skills_history_user_id_alumni_fkey;
-alter table public.course_recommendations validate constraint course_recommendations_user_id_alumni_fkey;
+alter table public.skill_recommendations validate constraint skill_recommendations_user_id_alumni_fkey;
 alter table public.admin_activity_logs validate constraint admin_activity_logs_admin_user_id_auth_users_fkey;
 alter table public.jobs validate constraint jobs_created_by_auth_users_fkey;
 alter table public.events validate constraint events_created_by_auth_users_fkey;
@@ -670,7 +704,7 @@ alter table public.notifications validate constraint notifications_created_by_au
 
 create index if not exists survey_responses_user_id_idx       on public.survey_responses (user_id);
 create index if not exists skills_history_user_id_idx         on public.alumni_skills_history (user_id);
-create index if not exists recommendations_user_id_idx        on public.course_recommendations (user_id);
+create index if not exists recommendations_user_id_idx        on public.skill_recommendations (user_id);
 create index if not exists admin_activity_logs_admin_idx      on public.admin_activity_logs (admin_user_id);
 create index if not exists jobs_created_by_idx                on public.jobs (created_by);
 create index if not exists events_created_by_idx              on public.events (created_by);
@@ -717,7 +751,7 @@ begin
       (null, '["JavaScript","React","SQL"]', current_date - 30),
       (null, '["React","Node.js","UI/UX"]',  current_date - 20);
 
-    insert into public.course_recommendations (user_id, skill, demand, reason) values
+    insert into public.skill_recommendations (user_id, skill, demand, reason) values
       (null, 'Networking',  1, 'Requested by IT Support Specialist at Northern Mindanao Hospital'),
       (null, 'Node.js',     1, 'Requested by Junior Web Developer at Iligan Digital Solutions');
 

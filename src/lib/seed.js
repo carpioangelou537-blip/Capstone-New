@@ -78,7 +78,7 @@ export const SEED_SKILLS_HISTORY = [
   { id: uid(), userId: "", skills: ["React", "Node.js", "UI/UX"], snapshotDate: "2026-08-15" },
 ];
 
-export const SEED_COURSE_RECOMMENDATIONS = [
+export const SEED_SKILL_RECOMMENDATIONS = [
   { id: uid(), userId: "", skill: "Networking", demand: 1, reason: "Requested by IT Support Specialist at Northern Mindanao Hospital", createdAt: "2026-08-01" },
   { id: uid(), userId: "", skill: "Node.js", demand: 1, reason: "Requested by Junior Web Developer at Iligan Digital Solutions", createdAt: "2026-08-01" },
 ];

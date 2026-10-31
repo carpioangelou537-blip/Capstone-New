@@ -58,7 +58,7 @@ const TABLES = {
   notifications: "notifications",
   surveyResponses: "survey_responses",
   skillsHistory: "alumni_skills_history",
-  courseRecommendations: "course_recommendations",
+  skillRecommendations: "skill_recommendations",
   adminActivityLogs: "admin_activity_logs",
 };
 
@@ -340,9 +340,9 @@ export async function fetchSkillsHistory() {
   return (data || []).map(rowToSkills);
 }
 
-export async function fetchCourseRecommendations() {
+export async function fetchSkillRecommendations() {
   const { data, error } = await supabase
-    .from(TABLES.courseRecommendations)
+    .from(TABLES.skillRecommendations)
     .select("*")
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -359,7 +359,7 @@ export async function fetchAdminActivityLogs() {
 }
 
 export async function fetchAll() {
-  const [alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, adminActivityLogs] =
+  const [alumni, jobs, events, notifications, surveyResponses, skillsHistory, skillRecommendations, adminActivityLogs] =
     await Promise.all([
       fetchAlumni(),
       fetchJobs(),
@@ -367,10 +367,10 @@ export async function fetchAll() {
       fetchNotifications(),
       fetchSurveyResponses(),
       fetchSkillsHistory(),
-      fetchCourseRecommendations(),
+      fetchSkillRecommendations(),
       fetchAdminActivityLogs(),
     ]);
-  return { alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, adminActivityLogs };
+  return { alumni, jobs, events, notifications, surveyResponses, skillsHistory, skillRecommendations, adminActivityLogs };
 }
 
 /* ------------------------------ writes ------------------------------ */
@@ -489,12 +489,12 @@ export async function insertSkillsHistory(rec) {
   return data;
 }
 
-export async function replaceCourseRecommendations(userId, recs) {
-  const { error } = await supabase.from(TABLES.courseRecommendations).delete().eq("user_id", userId);
+export async function replaceSkillRecommendations(userId, recs) {
+  const { error } = await supabase.from(TABLES.skillRecommendations).delete().eq("user_id", userId);
   if (error) throw error;
   if (recs.length > 0) {
     const rows = recs.map((r) => recommendationToRow({ ...r, userId }));
-    const { error: insertError } = await supabase.from(TABLES.courseRecommendations).insert(rows);
+    const { error: insertError } = await supabase.from(TABLES.skillRecommendations).insert(rows);
     if (insertError) throw insertError;
   }
 }
