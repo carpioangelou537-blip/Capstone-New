@@ -66,7 +66,6 @@ const TABLES = {
   surveyResponses: "survey_responses",
   skillsHistory: "alumni_skills_history",
   courseRecommendations: "course_recommendations",
-  jobApplications: "job_applications",
   adminActivityLogs: "admin_activity_logs",
 };
 
@@ -245,26 +244,6 @@ function rowToRecommendation(row) {
   };
 }
 
-function applicationToRow(rec) {
-  return {
-    id: rec.id,
-    user_id: rec.userId || null,
-    job_id: rec.jobId || null,
-    status: rec.status || "applied",
-    applied_at: rec.appliedAt || null,
-  };
-}
-
-function rowToApplication(row) {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    jobId: row.job_id || null,
-    status: row.status || "applied",
-    appliedAt: row.applied_at || null,
-  };
-}
-
 function activityToRow(rec) {
   return {
     id: rec.id,
@@ -377,15 +356,6 @@ export async function fetchCourseRecommendations() {
   return (data || []).map(rowToRecommendation);
 }
 
-export async function fetchJobApplications() {
-  const { data, error } = await supabase
-    .from(TABLES.jobApplications)
-    .select("*")
-    .order("applied_at", { ascending: false });
-  if (error) throw error;
-  return (data || []).map(rowToApplication);
-}
-
 export async function fetchAdminActivityLogs() {
   const { data, error } = await supabase
     .from(TABLES.adminActivityLogs)
@@ -410,7 +380,7 @@ export async function fetchPasswordResetRequests() {
 }
 
 export async function fetchAll() {
-  const [alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, jobApplications, adminActivityLogs, passwordResetRequests] =
+  const [alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, adminActivityLogs, passwordResetRequests] =
     await Promise.all([
       fetchAlumni(),
       fetchJobs(),
@@ -419,11 +389,10 @@ export async function fetchAll() {
       fetchSurveyResponses(),
       fetchSkillsHistory(),
       fetchCourseRecommendations(),
-      fetchJobApplications(),
       fetchAdminActivityLogs(),
       fetchPasswordResetRequests(),
     ]);
-  return { alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, jobApplications, adminActivityLogs, passwordResetRequests };
+  return { alumni, jobs, events, notifications, surveyResponses, skillsHistory, courseRecommendations, adminActivityLogs, passwordResetRequests };
 }
 
 /* ------------------------------ writes ------------------------------ */
@@ -559,16 +528,6 @@ export async function replaceCourseRecommendations(userId, recs) {
     const { error: insertError } = await supabase.from(TABLES.courseRecommendations).insert(rows);
     if (insertError) throw insertError;
   }
-}
-
-export async function insertJobApplication(rec) {
-  const { data, error } = await supabase
-    .from(TABLES.jobApplications)
-    .insert(applicationToRow(rec))
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
 }
 
 export async function insertActivityLog(rec) {

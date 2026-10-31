@@ -83,10 +83,6 @@ export const SEED_COURSE_RECOMMENDATIONS = [
   { id: uid(), userId: "", skill: "Node.js", demand: 1, reason: "Requested by Junior Web Developer at Iligan Digital Solutions", createdAt: "2026-08-01" },
 ];
 
-export const SEED_JOB_APPLICATIONS = [
-  { id: uid(), userId: "", jobId: null, status: "applied", appliedAt: "2026-08-20" },
-];
-
 export const SEED_ACTIVITY_LOGS = [
   { id: uid(), adminUserId: "", action: "approved_alumnus", detail: "Maria Santos", createdAt: "2026-08-01 08:12:00" },
   { id: uid(), adminUserId: "", action: "published_job", detail: "Junior Web Developer at Iligan Digital Solutions", createdAt: "2026-08-02 09:00:00" },

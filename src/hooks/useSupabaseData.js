@@ -7,7 +7,6 @@ import {
   SEED_SURVEY_RESPONSES,
   SEED_SKILLS_HISTORY,
   SEED_COURSE_RECOMMENDATIONS,
-  SEED_JOB_APPLICATIONS,
   SEED_ACTIVITY_LOGS,
 } from "../lib/seed";
 import * as api from "../lib/supabaseService";
@@ -26,7 +25,6 @@ export function useSupabaseData(user, refreshKey = 0) {
   const [surveyResponses, setSurveyResponses] = useState(SEED_SURVEY_RESPONSES);
   const [skillsHistory, setSkillsHistory] = useState(SEED_SKILLS_HISTORY);
   const [courseRecommendations, setCourseRecommendations] = useState(SEED_COURSE_RECOMMENDATIONS);
-  const [jobApplications, setJobApplications] = useState(SEED_JOB_APPLICATIONS);
   const [adminActivityLogs, setAdminActivityLogs] = useState(SEED_ACTIVITY_LOGS);
   const [passwordResetRequests, setPasswordResetRequests] = useState([]);
   const [dbStatus, setDbStatus] = useState("idle");
@@ -45,7 +43,6 @@ export function useSupabaseData(user, refreshKey = 0) {
       setSurveyResponses(SEED_SURVEY_RESPONSES);
       setSkillsHistory(SEED_SKILLS_HISTORY);
       setCourseRecommendations(SEED_COURSE_RECOMMENDATIONS);
-      setJobApplications(SEED_JOB_APPLICATIONS);
       setAdminActivityLogs(SEED_ACTIVITY_LOGS);
       setPasswordResetRequests([]);
       setDbStatus("idle");
@@ -68,7 +65,6 @@ export function useSupabaseData(user, refreshKey = 0) {
         setSurveyResponses(remote.surveyResponses);
         setSkillsHistory(remote.skillsHistory);
         setCourseRecommendations(remote.courseRecommendations);
-        setJobApplications(remote.jobApplications);
         setAdminActivityLogs(remote.adminActivityLogs);
         setPasswordResetRequests(remote.passwordResetRequests);
         setDbStatus("connected");
@@ -81,7 +77,6 @@ export function useSupabaseData(user, refreshKey = 0) {
         setSurveyResponses([]);
         setSkillsHistory([]);
         setCourseRecommendations([]);
-        setJobApplications([]);
         setAdminActivityLogs([]);
         setPasswordResetRequests([]);
         setDbStatus("offline");
@@ -112,7 +107,6 @@ export function useSupabaseData(user, refreshKey = 0) {
     surveyResponses,
     skillsHistory,
     courseRecommendations,
-    jobApplications,
     adminActivityLogs,
     passwordResetRequests,
     me,
@@ -125,7 +119,6 @@ export function useSupabaseData(user, refreshKey = 0) {
     setSurveyResponses,
     setSkillsHistory,
     setCourseRecommendations,
-    setJobApplications,
     setAdminActivityLogs,
     setPasswordResetRequests,
   };

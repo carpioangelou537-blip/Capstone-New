@@ -11,7 +11,6 @@
 --    survey_responses         -> latest employment survey per alumnus
 --    alumni_skills_history    -> timestamped skill snapshots
 --    course_recommendations   -> AI-generated skill/course suggestions
---    job_applications         -> alumni job applications
 --    admin_activity_logs      -> audit trail of every admin action
 --    password_reset_requests  -> admin-only queue for password recovery follow-up
 --
@@ -197,15 +196,7 @@ create table if not exists public.course_recommendations (
   created_at timestamptz default timezone('utc', now())
 );
 
--- --------------------------- job_applications --------------------------
-create table if not exists public.job_applications (
-  id         uuid primary key default gen_random_uuid(),
-  user_id    uuid,
-  job_id     uuid,
-  status     text default 'applied',
-  applied_at date default current_date,
-  created_at timestamptz default timezone('utc', now())
-);
+drop table if exists public.job_applications;
 
 -- --------------------------- admin_activity_logs -----------------------
 create table if not exists public.admin_activity_logs (
@@ -266,7 +257,6 @@ drop policy if exists "read alumni" on public.alumni;
 drop policy if exists "read survey_responses" on public.survey_responses;
 drop policy if exists "read alumni_skills_history" on public.alumni_skills_history;
 drop policy if exists "read course_recommendations" on public.course_recommendations;
-drop policy if exists "read job_applications" on public.job_applications;
 drop policy if exists "signed in insert alumni" on public.alumni;
 drop policy if exists "signed in update alumni" on public.alumni;
 drop policy if exists "signed in delete alumni" on public.alumni;
@@ -279,9 +269,6 @@ drop policy if exists "signed in delete alumni_skills_history" on public.alumni_
 drop policy if exists "signed in insert course_recommendations" on public.course_recommendations;
 drop policy if exists "signed in update course_recommendations" on public.course_recommendations;
 drop policy if exists "signed in delete course_recommendations" on public.course_recommendations;
-drop policy if exists "signed in insert job_applications" on public.job_applications;
-drop policy if exists "signed in update job_applications" on public.job_applications;
-drop policy if exists "signed in delete job_applications" on public.job_applications;
 do $$
 declare
   item record;
@@ -294,7 +281,6 @@ begin
       ('survey_responses', 'user_id'),
       ('alumni_skills_history', 'user_id'),
       ('course_recommendations', 'user_id'),
-      ('job_applications', 'user_id'),
       ('admin_activity_logs', 'admin_user_id')
     ) as columns_to_convert(table_name, column_name)
   loop
@@ -376,12 +362,6 @@ before insert on public.course_recommendations
 for each row
 execute function public.attach_auth_user_id();
 
-drop trigger if exists trg_job_applications_auth_user_id on public.job_applications;
-create trigger trg_job_applications_auth_user_id
-before insert on public.job_applications
-for each row
-execute function public.attach_auth_user_id();
-
 create or replace function public.attach_admin_auth_user_id()
 returns trigger
 language plpgsql
@@ -438,7 +418,6 @@ alter table public.notifications          enable row level security;
 alter table public.survey_responses       enable row level security;
 alter table public.alumni_skills_history  enable row level security;
 alter table public.course_recommendations enable row level security;
-alter table public.job_applications       enable row level security;
 alter table public.admin_activity_logs    enable row level security;
 alter table public.password_reset_requests enable row level security;
 
@@ -466,7 +445,6 @@ drop policy if exists "read notifications"          on public.notifications;
 drop policy if exists "read survey_responses"       on public.survey_responses;
 drop policy if exists "read alumni_skills_history"  on public.alumni_skills_history;
 drop policy if exists "read course_recommendations" on public.course_recommendations;
-drop policy if exists "read job_applications"       on public.job_applications;
 drop policy if exists "read admin_activity_logs"    on public.admin_activity_logs;
 drop policy if exists "read password_reset_requests" on public.password_reset_requests;
 
@@ -491,9 +469,6 @@ drop policy if exists "signed in delete alumni_skills_history"  on public.alumni
 drop policy if exists "signed in insert course_recommendations" on public.course_recommendations;
 drop policy if exists "signed in update course_recommendations" on public.course_recommendations;
 drop policy if exists "signed in delete course_recommendations" on public.course_recommendations;
-drop policy if exists "signed in insert job_applications"       on public.job_applications;
-drop policy if exists "signed in update job_applications"       on public.job_applications;
-drop policy if exists "signed in delete job_applications"       on public.job_applications;
 drop policy if exists "signed in insert admin_activity_logs"    on public.admin_activity_logs;
 drop policy if exists "signed in update admin_activity_logs"    on public.admin_activity_logs;
 drop policy if exists "signed in delete admin_activity_logs"    on public.admin_activity_logs;
@@ -514,8 +489,6 @@ create policy "read alumni_skills_history"  on public.alumni_skills_history  for
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 create policy "read course_recommendations" on public.course_recommendations for select
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
-create policy "read job_applications"       on public.job_applications       for select
-  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 create policy "read admin_activity_logs"    on public.admin_activity_logs    for select
   using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 create policy "admin read password_reset_requests" on public.password_reset_requests for select
@@ -535,14 +508,14 @@ create policy "admin update password_reset_requests" on public.password_reset_re
   with check (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
 revoke all on public.alumni, public.survey_responses, public.alumni_skills_history,
-  public.course_recommendations, public.job_applications, public.admin_activity_logs from anon;
+  public.course_recommendations, public.admin_activity_logs from anon;
 revoke all on public.password_reset_requests from public, anon, authenticated;
 grant insert on public.password_reset_requests to anon, authenticated;
 grant select, update on public.password_reset_requests to authenticated;
 grant select on public.jobs, public.events, public.notifications to anon, authenticated;
 grant select, insert, update, delete on public.alumni, public.jobs, public.events,
   public.notifications, public.survey_responses, public.alumni_skills_history,
-  public.course_recommendations, public.job_applications, public.admin_activity_logs
+  public.course_recommendations, public.admin_activity_logs
   to authenticated;
 
 create policy "signed in insert alumni" on public.alumni for insert
@@ -600,14 +573,6 @@ create policy "signed in update course_recommendations" on public.course_recomme
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
   with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 create policy "signed in delete course_recommendations" on public.course_recommendations for delete
-  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
-
-create policy "signed in insert job_applications" on public.job_applications for insert
-  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
-create policy "signed in update job_applications" on public.job_applications for update
-  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
-  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
-create policy "signed in delete job_applications" on public.job_applications for delete
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
 create policy "signed in insert admin_activity_logs" on public.admin_activity_logs for insert
@@ -713,18 +678,6 @@ where recommendation.user_id is not null
 and not exists (
   select 1 from public.alumni as alumnus where alumnus.user_id = recommendation.user_id
 );
-update public.job_applications as application
-set user_id = null
-where application.user_id is not null
-and not exists (
-  select 1 from public.alumni as alumnus where alumnus.user_id = application.user_id
-);
-update public.job_applications as application
-set job_id = null
-where application.job_id is not null
-and not exists (
-  select 1 from public.jobs as job where job.id = application.job_id
-);
 update public.admin_activity_logs as activity
 set admin_user_id = null
 where activity.admin_user_id is not null
@@ -751,14 +704,6 @@ begin
     alter table public.course_recommendations add constraint course_recommendations_user_id_alumni_fkey
       foreign key (user_id) references public.alumni(user_id) on delete cascade not valid;
   end if;
-  if not exists (select 1 from pg_constraint where conrelid = 'public.job_applications'::regclass and conname = 'job_applications_user_id_alumni_fkey') then
-    alter table public.job_applications add constraint job_applications_user_id_alumni_fkey
-      foreign key (user_id) references public.alumni(user_id) on delete cascade not valid;
-  end if;
-  if not exists (select 1 from pg_constraint where conrelid = 'public.job_applications'::regclass and conname = 'job_applications_job_id_jobs_fkey') then
-    alter table public.job_applications add constraint job_applications_job_id_jobs_fkey
-      foreign key (job_id) references public.jobs(id) on delete set null not valid;
-  end if;
   if not exists (select 1 from pg_constraint where conrelid = 'public.admin_activity_logs'::regclass and conname = 'admin_activity_logs_admin_user_id_auth_users_fkey') then
     alter table public.admin_activity_logs add constraint admin_activity_logs_admin_user_id_auth_users_fkey
       foreign key (admin_user_id) references auth.users(id) on delete set null not valid;
@@ -782,8 +727,6 @@ alter table public.alumni validate constraint alumni_user_id_auth_users_fkey;
 alter table public.survey_responses validate constraint survey_responses_user_id_alumni_fkey;
 alter table public.alumni_skills_history validate constraint alumni_skills_history_user_id_alumni_fkey;
 alter table public.course_recommendations validate constraint course_recommendations_user_id_alumni_fkey;
-alter table public.job_applications validate constraint job_applications_user_id_alumni_fkey;
-alter table public.job_applications validate constraint job_applications_job_id_jobs_fkey;
 alter table public.admin_activity_logs validate constraint admin_activity_logs_admin_user_id_auth_users_fkey;
 alter table public.jobs validate constraint jobs_created_by_auth_users_fkey;
 alter table public.events validate constraint events_created_by_auth_users_fkey;
@@ -792,8 +735,6 @@ alter table public.notifications validate constraint notifications_created_by_au
 create index if not exists survey_responses_user_id_idx       on public.survey_responses (user_id);
 create index if not exists skills_history_user_id_idx         on public.alumni_skills_history (user_id);
 create index if not exists recommendations_user_id_idx        on public.course_recommendations (user_id);
-create index if not exists job_applications_user_id_idx       on public.job_applications (user_id);
-create index if not exists job_applications_job_id_idx        on public.job_applications (job_id);
 create index if not exists admin_activity_logs_admin_idx      on public.admin_activity_logs (admin_user_id);
 create index if not exists jobs_created_by_idx                on public.jobs (created_by);
 create index if not exists events_created_by_idx              on public.events (created_by);
@@ -843,9 +784,6 @@ begin
     insert into public.course_recommendations (user_id, skill, demand, reason) values
       (null, 'Networking',  1, 'Requested by IT Support Specialist at Northern Mindanao Hospital'),
       (null, 'Node.js',     1, 'Requested by Junior Web Developer at Iligan Digital Solutions');
-
-    insert into public.job_applications (user_id, job_id, status, applied_at) select
-      null, id, 'applied', current_date - 3 from public.jobs where title = 'Data Analyst';
 
     insert into public.admin_activity_logs (admin_user_id, action, detail) values
       (null, 'approved_alumnus',    'Maria Santos'),

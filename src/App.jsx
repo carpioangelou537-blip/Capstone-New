@@ -64,7 +64,6 @@ export default function App() {
     surveyResponses,
     skillsHistory,
     courseRecommendations,
-    jobApplications,
     adminActivityLogs,
     passwordResetRequests,
     setAlumni,
@@ -73,7 +72,6 @@ export default function App() {
     setNotifications,
     setSurveyResponses,
     setCourseRecommendations,
-    setJobApplications,
     setAdminActivityLogs,
     setPasswordResetRequests,
     loading,
@@ -416,18 +414,6 @@ export default function App() {
       setAdminActivityLogs((list) => [rec, ...list]);
       api.insertActivityLog(rec).catch(() => {});
     },
-    applyJob(jobId) {
-      if (!me) return;
-      const job = jobs.find((j) => j.id === jobId);
-      if (!job || jobApplications.some((a) => a.userId === me.userId && a.jobId === jobId)) return;
-      const rec = { id: uid(), userId: me.userId, jobId, status: "applied", appliedAt: todayString() };
-      setJobApplications((list) => [rec, ...list]);
-      api
-        .insertJobApplication(rec)
-        .then((row) => setJobApplications((list) => list.map((a) => (a.id === rec.id ? { ...a, id: row.id } : a))))
-        .catch(() => {});
-      addToast(`Application submitted for ${job.title}.`);
-    },
     addAlumni({ name: n, program: prog, gradYear }) {
       const record = {
         id: uid(),
@@ -632,7 +618,6 @@ export default function App() {
     surveyResponses,
     skillsHistory,
     courseRecommendations,
-    jobApplications,
     adminActivityLogs,
     passwordResetRequests,
     actions,
