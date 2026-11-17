@@ -245,6 +245,31 @@ as $$
   group by attendee.event_id;
 $$;
 
+create or replace function public.get_event_rsvp_details()
+returns table (event_id uuid, user_id uuid, response text, full_name text)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null
+     or coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin' then
+    raise exception 'Administrator access is required to view RSVP names.'
+      using errcode = '42501';
+  end if;
+
+  return query
+  select
+    attendee.event_id,
+    attendee.user_id,
+    attendee.response,
+    coalesce(alumnus.full_name, 'Alumni account')
+  from public.posts_response attendee
+  left join public.alumni alumnus on alumnus.user_id = attendee.user_id;
+end;
+$$;
+
 -- ------------------------------ job_alignment --------------------------
 -- Stores per-user matching results; the current app still calculates these
 -- results on demand and does not write to this table yet.
@@ -652,6 +677,8 @@ grant select, insert, update, delete on public.alumni, public.jobs, public.event
   to authenticated;
 revoke all on function public.get_event_rsvp_counts() from public, anon;
 grant execute on function public.get_event_rsvp_counts() to authenticated;
+revoke all on function public.get_event_rsvp_details() from public, anon;
+grant execute on function public.get_event_rsvp_details() to authenticated;
 
 create policy "signed in insert alumni" on public.alumni for insert
   with check (user_id = auth.uid() and role = 'alumni'

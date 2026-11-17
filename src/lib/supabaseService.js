@@ -391,10 +391,21 @@ export async function fetchEvents() {
 }
 
 export async function fetchEventResponses(userId, isAdmin = false) {
+  if (isAdmin) {
+    const { data, error } = await supabase.rpc("get_event_rsvp_details");
+    if (error) throw error;
+    return (data || []).map((row) => ({
+      event_id: row.event_id,
+      user_id: row.user_id,
+      response: row.response,
+      full_name: row.full_name,
+    }));
+  }
+
   let query = supabase
     .from("posts_response")
     .select("event_id,user_id,response");
-  if (!isAdmin) query = query.eq("user_id", userId);
+  query = query.eq("user_id", userId);
   const { data, error } = await query;
   if (error) throw error;
   return data || [];
@@ -483,7 +494,7 @@ export async function fetchAll({ userId, isAdmin = false, onAlumniLoaded } = {})
     const responses = responsesByEvent.get(response.event_id) || [];
     responses.push({
       userId: response.user_id,
-      name: alumniByUserId.get(response.user_id)?.name || "Alumni account",
+      name: response.full_name || alumniByUserId.get(response.user_id)?.name || "Alumni account",
       response: response.response,
     });
     responsesByEvent.set(response.event_id, responses);

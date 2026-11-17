@@ -98,6 +98,31 @@ as $$
   group by attendee.event_id;
 $$;
 
+create or replace function public.get_event_rsvp_details()
+returns table (event_id uuid, user_id uuid, response text, full_name text)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if auth.uid() is null
+     or coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin' then
+    raise exception 'Administrator access is required to view RSVP names.'
+      using errcode = '42501';
+  end if;
+
+  return query
+  select
+    attendee.event_id,
+    attendee.user_id,
+    attendee.response,
+    coalesce(alumnus.full_name, 'Alumni account')
+  from public.posts_response attendee
+  left join public.alumni alumnus on alumnus.user_id = attendee.user_id;
+end;
+$$;
+
 -- DB8: saved job alignment results. Current app alignment is still computed
 -- on demand and is not automatically written to this table.
 create table if not exists public.job_alignment (
@@ -137,6 +162,8 @@ grant select, insert, update, delete on public.posts_response,
   public.job_alignment, public.alumni_job_history to authenticated;
 revoke all on function public.get_event_rsvp_counts() from public, anon;
 grant execute on function public.get_event_rsvp_counts() to authenticated;
+revoke all on function public.get_event_rsvp_details() from public, anon;
+grant execute on function public.get_event_rsvp_details() to authenticated;
 
 drop policy if exists "read posts_response" on public.posts_response;
 create policy "read posts_response" on public.posts_response for select

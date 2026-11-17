@@ -149,9 +149,9 @@ use it.
   including `posts_response`, `job_alignment`, and `alumni_job_history`.
   It also drops the retired `course_competencies` table.
 - `src/supabase/dfd_erd_tables.sql` — targeted, rerunnable additions for an
-  existing database: DB7 RSVP table/access/count support, DB8, DB10, and the
-  DFD fields for DB5 and DB6. Run this updated script in Supabase if the
-  existing database has not received the RSVP migration.
+  existing database: DB7 RSVP table/access/count/name support, DB8, DB10,
+  and the DFD fields for DB5 and DB6. Run the RSVP SQL additions in Supabase
+  when the existing database has not received those functions.
 - `src/supabase/authenticated_data_access.sql` — restores authenticated
   grants and owner/admin RLS policies for alumni, skill history, and
   recommendations when those table reads are denied.

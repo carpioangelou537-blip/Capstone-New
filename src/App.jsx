@@ -569,7 +569,7 @@ export default function App() {
         const rows = responseByEvent.get(response.event_id) || [];
         rows.push({
           userId: response.user_id,
-          name: alumni.find((alumnus) => alumnus.userId === response.user_id)?.name || "Alumni account",
+          name: response.full_name || alumni.find((alumnus) => alumnus.userId === response.user_id)?.name || "Alumni account",
           response: response.response,
         });
         responseByEvent.set(response.event_id, rows);
