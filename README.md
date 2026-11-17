@@ -148,6 +148,9 @@ IDs. DB10 is kept in the schema even though the app does not currently use it.
   It also drops the retired `course_competencies` table.
 - `src/supabase/dfd_erd_tables.sql` — targeted, rerunnable additions for an
   existing database: DB7, DB8, DB10, and the DFD fields for DB5 and DB6.
+- `src/supabase/authenticated_data_access.sql` — restores authenticated
+  grants and owner/admin RLS policies for alumni, skill history, and
+  recommendations when those table reads are denied.
 - `src/supabase/password_reset_requests.sql` — removes the retired admin
   password recovery request queue from an existing database.
 - `src/supabase/ml_schema.sql` — focused additions for an existing base

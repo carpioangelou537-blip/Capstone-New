@@ -675,8 +675,13 @@ export default function App() {
       )}
       {user && dataErrors.length > 0 && (
         <div className="env-warning" role="status">
-          Some database data could not be loaded ({dataErrors.map((error) => error.resource).join(", ")}).
-          Check Supabase connectivity, table setup, and Row Level Security policies.
+          Some database data could not be loaded.
+          {dataErrors.map((error) => (
+            <div key={`${error.resource}-${error.message}`}>
+              {error.resource}: {error.message}
+            </div>
+          ))}
+          Check Supabase table setup and Row Level Security policies if the error indicates a missing table or permission denial.
         </div>
       )}
       <ToastStack toasts={toasts} />

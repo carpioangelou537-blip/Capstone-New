@@ -63,6 +63,25 @@ const TABLES = {
   adminActivityLogs: "admin_activity_logs",
 };
 
+const RESOURCE_FETCH_TIMEOUT_MS = 30000;
+
+async function fetchResourceWithTimeout(fetchResource) {
+  let timeoutId;
+  try {
+    return await Promise.race([
+      fetchResource(),
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error(`Supabase request timed out after ${RESOURCE_FETCH_TIMEOUT_MS / 1000} seconds.`)),
+          RESOURCE_FETCH_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 const ALUMNUS_COLUMN_MAP = {
   name: "full_name",
   email: "email",
@@ -372,7 +391,7 @@ export async function fetchAll(onAlumniLoaded) {
   ];
   const results = await Promise.all(resources.map(async ([name, fetchResource]) => {
     try {
-      const data = await fetchResource();
+      const data = await fetchResourceWithTimeout(fetchResource);
       if (name === "alumni") onAlumniLoaded?.(data, null);
       return [name, data, null];
     } catch (error) {

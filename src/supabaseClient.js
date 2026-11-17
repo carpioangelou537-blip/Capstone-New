@@ -20,8 +20,8 @@ function fetchWithTimeout(input, init = {}) {
     externalSignal?.addEventListener("abort", abortWithExternalSignal, { once: true });
   }
   const timeoutId = setTimeout(
-    () => controller.abort(new DOMException("Supabase request timed out after 12 seconds.", "TimeoutError")),
-    12000,
+    () => controller.abort(new DOMException("Supabase request timed out after 32 seconds.", "TimeoutError")),
+    32000,
   );
 
   return fetch(input, { ...init, signal: controller.signal }).finally(() => {
