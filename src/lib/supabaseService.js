@@ -359,19 +359,30 @@ export async function fetchAdminActivityLogs() {
   return (data || []).map(rowToActivity);
 }
 
-export async function fetchAll() {
-  const [alumni, jobs, events, notifications, surveyResponses, skillsHistory, skillRecommendations, adminActivityLogs] =
-    await Promise.all([
-      fetchAlumni(),
-      fetchJobs(),
-      fetchEvents(),
-      fetchNotifications(),
-      fetchSurveyResponses(),
-      fetchSkillsHistory(),
-      fetchSkillRecommendations(),
-      fetchAdminActivityLogs(),
-    ]);
-  return { alumni, jobs, events, notifications, surveyResponses, skillsHistory, skillRecommendations, adminActivityLogs };
+export async function fetchAll(onAlumniLoaded) {
+  const resources = [
+    ["alumni", fetchAlumni],
+    ["jobs", fetchJobs],
+    ["events", fetchEvents],
+    ["notifications", fetchNotifications],
+    ["surveyResponses", fetchSurveyResponses],
+    ["skillsHistory", fetchSkillsHistory],
+    ["skillRecommendations", fetchSkillRecommendations],
+    ["adminActivityLogs", fetchAdminActivityLogs],
+  ];
+  const results = await Promise.all(resources.map(async ([name, fetchResource]) => {
+    try {
+      const data = await fetchResource();
+      if (name === "alumni") onAlumniLoaded?.(data, null);
+      return [name, data, null];
+    } catch (error) {
+      if (name === "alumni") onAlumniLoaded?.([], error);
+      return [name, [], { resource: name, message: error.message || "Database request failed." }];
+    }
+  }));
+  const values = Object.fromEntries(results.map(([name, data]) => [name, data]));
+  const errors = results.map(([, , error]) => error).filter(Boolean);
+  return { ...values, errors };
 }
 
 /* ------------------------------ writes ------------------------------ */

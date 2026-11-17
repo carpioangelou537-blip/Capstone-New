@@ -72,8 +72,10 @@ export default function App() {
     setSurveyResponses,
     setSkillRecommendations,
     setAdminActivityLogs,
-    loading,
     dbStatus,
+    alumniReady,
+    alumniLoadError,
+    dataErrors,
     me,
   } = data;
 
@@ -139,12 +141,13 @@ export default function App() {
 
   /* Resolve authenticated users after their real account data has loaded. */
   useEffect(() => {
-    if (!authChecked || !user || page !== "splash" || loading || dbStatus === "idle") return;
+    if (!authChecked || !user || page !== "splash") return;
     if (role === "admin") {
       setPage("dashboard");
       return;
     }
-    if (dbStatus === "offline") {
+    if (!alumniReady) return;
+    if (alumniLoadError || dbStatus === "offline") {
       setPage("dashboard");
       return;
     }
@@ -163,7 +166,7 @@ export default function App() {
       return;
     }
     setPage("dashboard");
-  }, [authChecked, user, page, loading, dbStatus, role, me]);
+  }, [authChecked, user, page, alumniReady, alumniLoadError, dbStatus, role, me]);
 
   function addToast(text) {
     const id = uid();
@@ -234,7 +237,14 @@ export default function App() {
   async function handleLogin(email, password) {
     setAuthError("");
     setAuthMessage("");
-    const res = await api.signIn(email, password);
+    let res;
+    try {
+      res = await api.signIn(email, password);
+    } catch (error) {
+      console.error("Could not sign in.", error);
+      setAuthError(error.message || "Could not reach Supabase. Check your connection and try again.");
+      return;
+    }
     if (res.error) {
       setAuthError(res.error.message);
       return;
@@ -244,10 +254,11 @@ export default function App() {
       setAuthError("Sign-in failed. Please try again.");
       return;
     }
+    setUser(u);
     const r = userRole(u);
     setRole(r);
     setName(userDisplayName(u));
-    await ensureAlumnusRow(u);
+    ensureAlumnusRow(u);
     setPage("splash");
   }
 
@@ -311,7 +322,8 @@ export default function App() {
     }
     setName(userDisplayName(res.user));
     if (res.session) {
-      await ensureAlumnusRow(res.user);
+      setUser(res.user);
+      ensureAlumnusRow(res.user);
       setPage("splash");
     } else {
       setAuthError("Account created. Please check your email to confirm your account, then sign in.");
@@ -659,6 +671,12 @@ export default function App() {
         <div className="env-warning">
           No <code>.env</code> found — running on demo data. Copy the <code>.env</code> file from your Capstone folder to enable
           sign-up / login.
+        </div>
+      )}
+      {user && dataErrors.length > 0 && (
+        <div className="env-warning" role="status">
+          Some database data could not be loaded ({dataErrors.map((error) => error.resource).join(", ")}).
+          Check Supabase connectivity, table setup, and Row Level Security policies.
         </div>
       )}
       <ToastStack toasts={toasts} />

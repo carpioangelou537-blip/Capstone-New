@@ -30,6 +30,9 @@ export function useSupabaseData(user, refreshKey = 0) {
   const [adminActivityLogs, setAdminActivityLogs] = useState(SEED_ACTIVITY_LOGS);
   const [dbStatus, setDbStatus] = useState("idle");
   const [loading, setLoading] = useState(false);
+  const [alumniReady, setAlumniReady] = useState(false);
+  const [alumniLoadError, setAlumniLoadError] = useState(false);
+  const [dataErrors, setDataErrors] = useState([]);
 
   const userId = user?.id || null;
 
@@ -47,18 +50,29 @@ export function useSupabaseData(user, refreshKey = 0) {
       setAdminActivityLogs(SEED_ACTIVITY_LOGS);
       setDbStatus("idle");
       setLoading(false);
+      setAlumniReady(false);
+      setAlumniLoadError(false);
+      setDataErrors([]);
       return () => {
         cancelled = true;
       };
     }
 
     setLoading(true);
+    setAlumniReady(false);
+    setAlumniLoadError(false);
+    setDataErrors([]);
 
     async function load() {
       let timeoutId;
       try {
         const remote = await Promise.race([
-          api.fetchAll(),
+          api.fetchAll((rows, error) => {
+            if (cancelled) return;
+            setAlumni(rows);
+            setAlumniLoadError(Boolean(error));
+            setAlumniReady(true);
+          }),
           new Promise((_, reject) => {
             timeoutId = setTimeout(
               () => reject(new Error(`Supabase data request timed out after ${DATA_LOAD_TIMEOUT_MS / 1000} seconds.`)),
@@ -75,7 +89,11 @@ export function useSupabaseData(user, refreshKey = 0) {
         setSkillsHistory(remote.skillsHistory);
         setSkillRecommendations(remote.skillRecommendations);
         setAdminActivityLogs(remote.adminActivityLogs);
-        setDbStatus("connected");
+        setDataErrors(remote.errors);
+        remote.errors.forEach((error) => {
+          console.error(`Could not load Supabase resource "${error.resource}".`, error.message);
+        });
+        setDbStatus(remote.errors.length === 0 ? "connected" : "partial");
       } catch (error) {
         if (cancelled) return;
         console.error("Could not load data from Supabase; showing the dashboard without remote data.", error);
@@ -87,10 +105,14 @@ export function useSupabaseData(user, refreshKey = 0) {
         setSkillsHistory([]);
         setSkillRecommendations([]);
         setAdminActivityLogs([]);
+        setDataErrors([{ resource: "database", message: error.message || "Database request failed." }]);
         setDbStatus("offline");
       } finally {
         clearTimeout(timeoutId);
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setAlumniReady(true);
+          setLoading(false);
+        }
       }
     }
 
@@ -120,6 +142,9 @@ export function useSupabaseData(user, refreshKey = 0) {
     me,
     loading,
     dbStatus,
+    alumniReady,
+    alumniLoadError,
+    dataErrors,
     setAlumni,
     setJobs,
     setEvents,

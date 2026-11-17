@@ -10,7 +10,28 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
  */
 export const hasSupabaseEnv = Boolean(supabaseUrl && supabaseAnonKey);
 
+function fetchWithTimeout(input, init = {}) {
+  const controller = new AbortController();
+  const externalSignal = init.signal;
+  const abortWithExternalSignal = () => controller.abort(externalSignal.reason);
+  if (externalSignal?.aborted) {
+    abortWithExternalSignal();
+  } else {
+    externalSignal?.addEventListener("abort", abortWithExternalSignal, { once: true });
+  }
+  const timeoutId = setTimeout(
+    () => controller.abort(new DOMException("Supabase request timed out after 12 seconds.", "TimeoutError")),
+    12000,
+  );
+
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => {
+    clearTimeout(timeoutId);
+    externalSignal?.removeEventListener("abort", abortWithExternalSignal);
+  });
+}
+
 export const supabase = createClient(
   supabaseUrl || "https://placeholder.supabase.co",
-  supabaseAnonKey || "placeholder"
+  supabaseAnonKey || "placeholder",
+  { global: { fetch: fetchWithTimeout } },
 );
