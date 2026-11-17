@@ -932,6 +932,16 @@ html, body, #root, .tracer-root {
 .list-item-title { font-weight: 700; font-size: 0.88rem; overflow-wrap: anywhere; }
 .list-item-sub { font-size: 0.76rem; color: rgba(255,255,255,0.55); margin-top: 2px; overflow-wrap: anywhere; }
 .list-item-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.event-responses {
+  flex-basis: 100%; padding: 10px 12px; border-radius: 8px;
+  background: rgba(255,255,255,0.04); font-size: 0.8rem;
+}
+.event-responses ul { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 8px 0 0; }
+.event-responses li { border-radius: 999px; padding: 4px 9px; background: rgba(255,255,255,0.08); }
+.event-responses p { margin: 6px 0 0; color: rgba(255,255,255,0.55); }
+.detail-panel .event-responses { background: #f7f4f3; }
+.detail-panel .event-responses li { background: #eee8e6; }
+.detail-panel .event-responses p { color: #666; }
 
 .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .bar-label { width: 120px; flex-shrink: 0; font-size: 0.78rem; color: rgba(255,255,255,0.75); }
