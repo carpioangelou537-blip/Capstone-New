@@ -34,8 +34,9 @@ export async function signOut() {
 }
 
 export async function getSessionUser() {
-  const { data } = await supabase.auth.getUser();
-  return data?.user || null;
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return data.session?.user || null;
 }
 
 export async function updateAuthEmail(email) {

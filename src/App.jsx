@@ -105,7 +105,6 @@ export default function App() {
         setUser(u);
         setRole(userRole(u));
         setName(userDisplayName(u));
-        ensureAlumnusRow(u);
       } else {
         setUser(null);
       }
