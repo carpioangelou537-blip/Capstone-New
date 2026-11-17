@@ -151,6 +151,8 @@ IDs. DB10 is kept in the schema even though the app does not currently use it.
 - `src/supabase/authenticated_data_access.sql` — restores authenticated
   grants and owner/admin RLS policies for alumni, skill history, and
   recommendations when those table reads are denied.
+- `src/supabase/diagnose_data.sql` — read-only row counts for the main app
+  tables and the number of Auth accounts with the trusted admin role.
 - `src/supabase/password_reset_requests.sql` — removes the retired admin
   password recovery request queue from an existing database.
 - `src/supabase/ml_schema.sql` — focused additions for an existing base

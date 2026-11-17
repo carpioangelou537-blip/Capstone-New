@@ -279,13 +279,43 @@ function rowToActivity(row) {
 
 /* ------------------------------- reads ------------------------------- */
 
-export async function fetchAlumni() {
-  const { data, error } = await supabase
-    .from(TABLES.alumni)
-    .select("*")
-    .order("created_at", { ascending: true });
+export async function fetchAlumni(userId, isAdmin = false) {
+  const columns = [
+    "id",
+    "user_id",
+    "role",
+    "full_name",
+    "email",
+    "program",
+    "grad_year",
+    "date_of_birth",
+    "address",
+    "contact_number",
+    "employed",
+    "job_title",
+    "company_name",
+    "business_name",
+    "years",
+    "skills",
+    "survey_completed",
+    "avatar_url",
+    "verification_status",
+    "is_self",
+    "created_at",
+  ].join(",");
+  const makeQuery = () => supabase.from(TABLES.alumni).select(columns);
+
+  if (!isAdmin && userId) {
+    const { data, error } = await makeQuery().eq("user_id", userId).limit(1);
+    if (error) throw error;
+    return (data || []).map(rowToAlumnus);
+  }
+
+  const { data, error } = await makeQuery().limit(1000);
   if (error) throw error;
-  return (data || []).map(rowToAlumnus);
+  return (data || [])
+    .map(rowToAlumnus)
+    .sort((left, right) => String(left.createdAt || "").localeCompare(String(right.createdAt || "")));
 }
 
 export async function fetchMyAlumnus(userId) {
@@ -378,9 +408,9 @@ export async function fetchAdminActivityLogs() {
   return (data || []).map(rowToActivity);
 }
 
-export async function fetchAll(onAlumniLoaded) {
+export async function fetchAll({ userId, isAdmin = false, onAlumniLoaded } = {}) {
   const resources = [
-    ["alumni", fetchAlumni],
+    ["alumni", () => fetchAlumni(userId, isAdmin)],
     ["jobs", fetchJobs],
     ["events", fetchEvents],
     ["notifications", fetchNotifications],
@@ -395,7 +425,6 @@ export async function fetchAll(onAlumniLoaded) {
       if (name === "alumni") onAlumniLoaded?.(data, null);
       return [name, data, null];
     } catch (error) {
-      if (name === "alumni") onAlumniLoaded?.([], error);
       return [name, [], { resource: name, message: error.message || "Database request failed." }];
     }
   }));

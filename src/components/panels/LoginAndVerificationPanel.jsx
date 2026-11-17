@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Icon from "../ui/Icon";
 import EmptyState from "../ui/EmptyState";
 import { VerifyPill } from "../ui/Pills";
@@ -7,9 +8,23 @@ export default function LoginAndVerificationPanel({
   onApprove,
   onReject,
 }) {
+  const [approvingIds, setApprovingIds] = useState(() => new Set());
   const pending = alumni.filter((a) => a.verificationStatus === "pending");
   const verified = alumni.filter((a) => a.verificationStatus === "verified").length;
   const reviewed = alumni.filter((a) => a.verificationStatus !== "pending");
+
+  async function approve(id) {
+    setApprovingIds((current) => new Set(current).add(id));
+    try {
+      await onApprove(id);
+    } finally {
+      setApprovingIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
 
   return (
     <div className="panel-block">
@@ -39,8 +54,12 @@ export default function LoginAndVerificationPanel({
               <div className="list-item-sub">{a.program} · Class of {a.gradYear}</div>
             </div>
             <div className="list-item-actions">
-              <button className="btn-ghost" onClick={() => onApprove(a.id)}>
-                <Icon name="check" size={14} /> Approve
+              <button
+                className="btn-ghost"
+                onClick={() => approve(a.id)}
+                disabled={approvingIds.has(a.id)}
+              >
+                <Icon name="check" size={14} /> {approvingIds.has(a.id) ? "Approving…" : "Approve"}
               </button>
               <button className="btn-danger" onClick={() => onReject(a.id)} aria-label={`Reject ${a.name}`}>
                 <Icon name="x" size={15} />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   SEED_ALUMNI,
   SEED_JOBS,
@@ -31,6 +31,7 @@ export function useSupabaseData(user, refreshKey = 0) {
   const [alumniReady, setAlumniReady] = useState(false);
   const [alumniLoadError, setAlumniLoadError] = useState(false);
   const [dataErrors, setDataErrors] = useState([]);
+  const activeDataUserId = useRef(null);
 
   const userId = user?.id || null;
 
@@ -38,6 +39,7 @@ export function useSupabaseData(user, refreshKey = 0) {
     let cancelled = false;
 
     if (!userId) {
+      activeDataUserId.current = null;
       setAlumni(SEED_ALUMNI);
       setJobs(SEED_JOBS);
       setEvents(SEED_EVENTS);
@@ -56,6 +58,18 @@ export function useSupabaseData(user, refreshKey = 0) {
       };
     }
 
+    if (activeDataUserId.current !== userId) {
+      activeDataUserId.current = userId;
+      setAlumni([]);
+      setJobs([]);
+      setEvents([]);
+      setNotifications([]);
+      setSurveyResponses([]);
+      setSkillsHistory([]);
+      setSkillRecommendations([]);
+      setAdminActivityLogs([]);
+    }
+
     setLoading(true);
     setAlumniReady(false);
     setAlumniLoadError(false);
@@ -63,21 +77,26 @@ export function useSupabaseData(user, refreshKey = 0) {
 
     async function load() {
       try {
-        const remote = await api.fetchAll((rows, error) => {
-          if (cancelled) return;
-          setAlumni(rows);
-          setAlumniLoadError(Boolean(error));
-          setAlumniReady(true);
+        const remote = await api.fetchAll({
+          userId,
+          isAdmin: user?.app_metadata?.role === "admin",
+          onAlumniLoaded(rows, error) {
+            if (cancelled) return;
+            setAlumni(rows);
+            setAlumniLoadError(Boolean(error));
+            setAlumniReady(true);
+          },
         });
         if (cancelled) return;
-        setAlumni(remote.alumni);
-        setJobs(remote.jobs);
-        setEvents(remote.events);
-        setNotifications(remote.notifications);
-        setSurveyResponses(remote.surveyResponses);
-        setSkillsHistory(remote.skillsHistory);
-        setSkillRecommendations(remote.skillRecommendations);
-        setAdminActivityLogs(remote.adminActivityLogs);
+        const failedResources = new Set(remote.errors.map((error) => error.resource));
+        if (!failedResources.has("alumni")) setAlumni(remote.alumni);
+        if (!failedResources.has("jobs")) setJobs(remote.jobs);
+        if (!failedResources.has("events")) setEvents(remote.events);
+        if (!failedResources.has("notifications")) setNotifications(remote.notifications);
+        if (!failedResources.has("surveyResponses")) setSurveyResponses(remote.surveyResponses);
+        if (!failedResources.has("skillsHistory")) setSkillsHistory(remote.skillsHistory);
+        if (!failedResources.has("skillRecommendations")) setSkillRecommendations(remote.skillRecommendations);
+        if (!failedResources.has("adminActivityLogs")) setAdminActivityLogs(remote.adminActivityLogs);
         setDataErrors(remote.errors);
         remote.errors.forEach((error) => {
           console.error(`Could not load Supabase resource "${error.resource}".`, error.message);
@@ -86,14 +105,6 @@ export function useSupabaseData(user, refreshKey = 0) {
       } catch (error) {
         if (cancelled) return;
         console.error("Could not load data from Supabase; showing the dashboard without remote data.", error);
-        setAlumni([]);
-        setJobs([]);
-        setEvents([]);
-        setNotifications([]);
-        setSurveyResponses([]);
-        setSkillsHistory([]);
-        setSkillRecommendations([]);
-        setAdminActivityLogs([]);
         setDataErrors([{ resource: "database", message: error.message || "Database request failed." }]);
         setDbStatus("offline");
       } finally {
@@ -108,7 +119,7 @@ export function useSupabaseData(user, refreshKey = 0) {
     return () => {
       cancelled = true;
     };
-  }, [userId, refreshKey]);
+  }, [userId, user?.app_metadata?.role, refreshKey]);
 
   const me = useMemo(() => {
     if (!userId) return alumni.find((a) => a.isSelf) || alumni[0] || null;
