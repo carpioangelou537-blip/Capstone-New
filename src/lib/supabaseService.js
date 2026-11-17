@@ -64,8 +64,24 @@ const TABLES = {
 };
 
 const RESOURCE_FETCH_TIMEOUT_MS = 30000;
+let sessionRefreshPromise = null;
 
-async function fetchResourceWithTimeout(fetchResource) {
+async function refreshSessionOnce() {
+  if (!sessionRefreshPromise) {
+    sessionRefreshPromise = supabase.auth.refreshSession()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (!data.session) throw new Error("Supabase did not return a refreshed session.");
+        return data.session;
+      })
+      .finally(() => {
+        sessionRefreshPromise = null;
+      });
+  }
+  return sessionRefreshPromise;
+}
+
+async function fetchResourceWithTimeout(fetchResource, retryAfterRefresh = true) {
   let timeoutId;
   try {
     return await Promise.race([
@@ -77,6 +93,12 @@ async function fetchResourceWithTimeout(fetchResource) {
         );
       }),
     ]);
+  } catch (error) {
+    if (retryAfterRefresh && /JWT issued at future/i.test(error.message || "")) {
+      await refreshSessionOnce();
+      return fetchResourceWithTimeout(fetchResource, false);
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }
