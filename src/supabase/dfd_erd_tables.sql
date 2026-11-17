@@ -42,8 +42,8 @@ before insert or update on public.notifications
 for each row
 execute function public.sync_notification_body();
 
--- DB7: normalized event RSVP/feedback records.
--- Existing app RSVP data remains in events.rsvps.
+-- DB7: normalized event RSVP/feedback records used by the app.
+-- Existing name-only data remains in events.rsvps for compatibility.
 create table if not exists public.posts_response (
   id         uuid primary key default gen_random_uuid(),
   event_id   uuid not null references public.events(id) on delete cascade,
@@ -54,6 +54,49 @@ create table if not exists public.posts_response (
   updated_at timestamptz not null default timezone('utc', now()),
   constraint posts_response_event_user_key unique (event_id, user_id)
 );
+
+create or replace function public.get_event_rsvp_counts()
+returns table (event_id uuid, going_count bigint)
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  with legacy_attendees as (
+    select
+      e.id as event_id,
+      case
+        when a.user_id is not null then 'user:' || a.user_id::text
+        else 'name:' || lower(trim(legacy.name))
+      end as attendee_key
+    from public.events e
+    cross join lateral jsonb_array_elements_text(
+      case when jsonb_typeof(e.rsvps) = 'array' then e.rsvps else '[]'::jsonb end
+    ) as legacy(name)
+    left join public.alumni a
+      on lower(trim(a.full_name)) = lower(trim(legacy.name))
+    where trim(legacy.name) <> ''
+      and not exists (
+        select 1
+        from public.posts_response response
+        where response.event_id = e.id
+          and response.user_id = a.user_id
+          and response.response = 'not_going'
+      )
+  ),
+  confirmed_attendees as (
+    select event_id, 'user:' || user_id::text as attendee_key
+    from public.posts_response
+    where response = 'going'
+  )
+  select attendee.event_id, count(distinct attendee.attendee_key)::bigint
+  from (
+    select * from legacy_attendees
+    union all
+    select * from confirmed_attendees
+  ) attendee
+  group by attendee.event_id;
+$$;
 
 -- DB8: saved job alignment results. Current app alignment is still computed
 -- on demand and is not automatically written to this table.
@@ -92,6 +135,8 @@ revoke all on public.posts_response, public.job_alignment,
   public.alumni_job_history from anon;
 grant select, insert, update, delete on public.posts_response,
   public.job_alignment, public.alumni_job_history to authenticated;
+revoke all on function public.get_event_rsvp_counts() from public, anon;
+grant execute on function public.get_event_rsvp_counts() to authenticated;
 
 drop policy if exists "read posts_response" on public.posts_response;
 create policy "read posts_response" on public.posts_response for select

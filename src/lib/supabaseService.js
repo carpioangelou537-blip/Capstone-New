@@ -197,12 +197,17 @@ function eventToRow(rec) {
 }
 
 function rowToEvent(row) {
+  const legacyRsvps = Array.isArray(row.rsvps) ? row.rsvps : [];
   return {
     id: row.id,
     title: row.title,
     description: row.description || "",
     date: row.date,
-    rsvps: Array.isArray(row.rsvps) ? row.rsvps : [],
+    rsvps: legacyRsvps,
+    legacyRsvps,
+    rsvpResponses: [],
+    rsvpCount: legacyRsvps.length,
+    myRsvp: null,
   };
 }
 
@@ -385,6 +390,22 @@ export async function fetchEvents() {
   return (data || []).map(rowToEvent);
 }
 
+export async function fetchEventResponses(userId, isAdmin = false) {
+  let query = supabase
+    .from("posts_response")
+    .select("event_id,user_id,response");
+  if (!isAdmin) query = query.eq("user_id", userId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+export async function fetchEventRsvpCounts() {
+  const { data, error } = await supabase.rpc("get_event_rsvp_counts");
+  if (error) throw error;
+  return data || [];
+}
+
 export async function fetchNotifications() {
   const { data, error } = await supabase
     .from(TABLES.notifications)
@@ -435,6 +456,8 @@ export async function fetchAll({ userId, isAdmin = false, onAlumniLoaded } = {})
     ["alumni", () => fetchAlumni(userId, isAdmin)],
     ["jobs", fetchJobs],
     ["events", fetchEvents],
+    ["eventResponses", () => fetchEventResponses(userId, isAdmin)],
+    ["eventRsvpCounts", fetchEventRsvpCounts],
     ["notifications", fetchNotifications],
     ["surveyResponses", fetchSurveyResponses],
     ["skillsHistory", fetchSkillsHistory],
@@ -452,7 +475,43 @@ export async function fetchAll({ userId, isAdmin = false, onAlumniLoaded } = {})
   }));
   const values = Object.fromEntries(results.map(([name, data]) => [name, data]));
   const errors = results.map(([, , error]) => error).filter(Boolean);
-  return { ...values, errors };
+  const alumniByUserId = new Map(
+    (values.alumni || []).filter((alumnus) => alumnus.userId).map((alumnus) => [alumnus.userId, alumnus]),
+  );
+  const responsesByEvent = new Map();
+  (values.eventResponses || []).forEach((response) => {
+    const responses = responsesByEvent.get(response.event_id) || [];
+    responses.push({
+      userId: response.user_id,
+      name: alumniByUserId.get(response.user_id)?.name || "Alumni account",
+      response: response.response,
+    });
+    responsesByEvent.set(response.event_id, responses);
+  });
+  const rsvpCounts = new Map(
+    (values.eventRsvpCounts || []).map((row) => [row.event_id, Number(row.going_count)]),
+  );
+  const events = (values.events || []).map((event) => {
+    const rsvpResponses = responsesByEvent.get(event.id) || [];
+    const responseByUserId = new Map(rsvpResponses.map((response) => [response.userId, response]));
+    const legacyRsvps = event.legacyRsvps || [];
+    const effectiveLegacyRsvps = legacyRsvps.filter((name) => {
+      const alumnus = [...alumniByUserId.values()].find((candidate) => candidate.name === name);
+      return !alumnus || responseByUserId.get(alumnus.userId)?.response !== "not_going";
+    });
+    const goingNames = [
+      ...effectiveLegacyRsvps,
+      ...rsvpResponses.filter((response) => response.response === "going").map((response) => response.name),
+    ];
+    return {
+      ...event,
+      rsvps: [...new Set(goingNames)],
+      rsvpResponses,
+      rsvpCount: rsvpCounts.get(event.id) ?? new Set(goingNames).size,
+      myRsvp: rsvpResponses.find((response) => response.userId === userId)?.response || null,
+    };
+  });
+  return { ...values, events, errors };
 }
 
 /* ------------------------------ writes ------------------------------ */
@@ -514,12 +573,14 @@ export async function deleteEvent(id) {
   if (error) throw error;
 }
 
-export async function setEventRsvps(id, rsvps) {
+export async function setEventRsvp(eventId, userId, response) {
   const { data, error } = await supabase
-    .from(TABLES.events)
-    .update({ rsvps })
-    .eq("id", id)
-    .select()
+    .from("posts_response")
+    .upsert(
+      { event_id: eventId, user_id: userId, response },
+      { onConflict: "event_id,user_id" },
+    )
+    .select("event_id,user_id,response")
     .single();
   if (error) throw error;
   return data;

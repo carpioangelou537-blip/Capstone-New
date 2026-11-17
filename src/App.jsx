@@ -505,7 +505,7 @@ export default function App() {
       actions.logAdmin("removed_job", target ? target.title : "");
     },
     addEvent(ev) {
-      const record = { id: uid(), rsvps: [], ...ev };
+      const record = { id: uid(), rsvps: [], legacyRsvps: [], rsvpResponses: [], rsvpCount: 0, myRsvp: null, ...ev };
       setEvents((list) => [record, ...list]);
       api
         .insertEvent(record)
@@ -522,14 +522,76 @@ export default function App() {
       api.deleteEvent(id).catch(() => {});
       actions.logAdmin("removed_event", target ? target.title : "");
     },
-    rsvpEvent(eventId) {
+    async rsvpEvent(eventId) {
       const current = events.find((e) => e.id === eventId);
-      if (!current || !me) return;
-      const going = current.rsvps.includes(me.name);
-      const next = going ? current.rsvps.filter((n) => n !== me.name) : [...current.rsvps, me.name];
-      setEvents((list) => list.map((e) => (e.id === eventId ? { ...e, rsvps: next } : e)));
-      api.setEventRsvps(eventId, next).catch(() => {});
-      addToast("RSVP updated.");
+      if (!current || !me?.userId) return;
+      const response = current.myRsvp === "going" ? "not_going" : "going";
+      const alreadyInLegacyList = (current.legacyRsvps || []).includes(me.name);
+      const countDelta = response === "going"
+        ? (current.myRsvp === "not_going" || !alreadyInLegacyList ? 1 : 0)
+        : -1;
+      setEvents((list) => list.map((event) => (
+        event.id === eventId
+          ? {
+            ...event,
+            myRsvp: response,
+            rsvpCount: Math.max(0, (event.rsvpCount ?? event.rsvps.length) + countDelta),
+          }
+          : event
+      )));
+      try {
+        await api.setEventRsvp(eventId, me.userId, response);
+        addToast(response === "going" ? "Your RSVP is saved." : "Your RSVP was changed to not going.");
+      } catch (error) {
+        setEvents((list) => list.map((event) => (
+          event.id === eventId
+            ? {
+              ...event,
+              myRsvp: current.myRsvp,
+              rsvpCount: current.rsvpCount ?? current.rsvps.length,
+            }
+            : event
+        )));
+        console.error("Could not save the event RSVP.", error);
+        addToast(`Could not save your RSVP: ${error.message || "database request failed."}`);
+      }
+    },
+    async refreshEventResponses(eventId) {
+      const responseRows = await api.fetchEventResponses(user?.id, true);
+      let counts = [];
+      try {
+        counts = await api.fetchEventRsvpCounts();
+      } catch (error) {
+        console.error("Could not load event RSVP counts; displaying the available responses.", error);
+      }
+      const responseByEvent = new Map();
+      responseRows.filter((response) => response.event_id === eventId).forEach((response) => {
+        const rows = responseByEvent.get(response.event_id) || [];
+        rows.push({
+          userId: response.user_id,
+          name: alumni.find((alumnus) => alumnus.userId === response.user_id)?.name || "Alumni account",
+          response: response.response,
+        });
+        responseByEvent.set(response.event_id, rows);
+      });
+      const responseCount = new Map(counts.map((row) => [row.event_id, Number(row.going_count)]));
+      setEvents((list) => list.map((event) => {
+        if (event.id !== eventId) return event;
+        const rsvpResponses = responseByEvent.get(eventId) || [];
+        const rsvpNames = [
+          ...(event.legacyRsvps || []).filter((name) => !alumni.some(
+            (alumnus) => alumnus.name === name
+              && rsvpResponses.some((response) => response.userId === alumnus.userId && response.response === "not_going"),
+          )),
+          ...rsvpResponses.filter((response) => response.response === "going").map((response) => response.name),
+        ];
+        return {
+          ...event,
+          rsvps: [...new Set(rsvpNames)],
+          rsvpResponses,
+          rsvpCount: responseCount.get(eventId) ?? new Set(rsvpNames).size,
+        };
+      }));
     },
     async sendNotification(text, target = "", link = "") {
       if (!isHttpLink(link)) {

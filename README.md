@@ -131,23 +131,27 @@ frontend environment. These scripts have different scopes:
 | DB4 | `job_recommendation` | `public.skill_recommendations` | AI skill recommendations |
 | DB5 | `notification` | `public.notifications` (`title`, `body`, `type`, `created_by`) | Admin-created messages; legacy `text` remains synchronized with `body` for the current app |
 | DB6 | `posts` | `public.events` (`title`, `date`, `type`, `description`) | Admin-created event postings |
-| DB7 | `posts_response` | `public.posts_response` | Normalized RSVP status and optional feedback; the current app still stores RSVPs in `events.rsvps` |
+| DB7 | `posts_response` | `public.posts_response` | Alumni RSVP status and optional feedback; admins can see who is going |
 | DB8 | `job_alignment` | `public.job_alignment` | Per-user job/course alignment result storage; the current app calculates alignment on demand |
 | DB9 | `user_skills` | `public.alumni.skills` | Skills stored as a JSONB column on the alumni profile |
 | DB10 | `alumni_job_history` | `public.alumni_job_history` | Job history per alumnus; retained but not currently used by the app |
 | DB11 | `jobs` | `public.jobs` | Admin-posted job suggestions |
 
-The DB7 and DB8 tables are present for the DFD/ERD without changing current
-RSVP or alignment behavior. Existing event RSVP data remains in `events.rsvps`;
-it is not automatically copied because it stores names rather than Auth user
-IDs. DB10 is kept in the schema even though the app does not currently use it.
+New event RSVPs are stored in `posts_response`, with one response per alumni
+account and event. Admins can view going/not-going names; alumni can only read
+their own response. The app preserves historic name-only RSVP data in
+`events.rsvps` and includes it in attendee counts without copying it to Auth
+accounts. DB10 is kept in the schema even though the app does not currently
+use it.
 
 - `src/supabase/schema.sql` — full schema for a fresh setup or a complete
   schema refresh. It includes RLS policies and the current table definitions,
   including `posts_response`, `job_alignment`, and `alumni_job_history`.
   It also drops the retired `course_competencies` table.
 - `src/supabase/dfd_erd_tables.sql` — targeted, rerunnable additions for an
-  existing database: DB7, DB8, DB10, and the DFD fields for DB5 and DB6.
+  existing database: DB7 RSVP table/access/count support, DB8, DB10, and the
+  DFD fields for DB5 and DB6. Run this updated script in Supabase if the
+  existing database has not received the RSVP migration.
 - `src/supabase/authenticated_data_access.sql` — restores authenticated
   grants and owner/admin RLS policies for alumni, skill history, and
   recommendations when those table reads are denied.

@@ -155,7 +155,7 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
   const surveyedCount = alumni.filter((a) => a.surveyCompleted).length;
   const pendingVerifications = alumni.filter((a) => a.verificationStatus === "pending").length;
   const verifiedCount = alumni.filter((a) => a.verificationStatus === "verified").length;
-  const totalRsvps = events.reduce((sum, e) => sum + e.rsvps.length, 0);
+  const totalRsvps = events.reduce((sum, e) => sum + (e.rsvpCount ?? e.rsvps.length), 0);
   const matchedJobs = jobs.filter((j) =>
     j.skills.some((s) => safeMe.skills.some((ms) => String(ms).toLowerCase() === String(s).toLowerCase()))
   ).length;
@@ -232,7 +232,14 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
         case "Career Tools & Job Postings":
           return <JobsAdminPanel jobs={jobs} onAdd={actions.addJob} onRemove={actions.removeJob} />;
         case "Manage Event Posting":
-          return <EventsAdminPanel events={events} onAdd={actions.addEvent} onRemove={actions.removeEvent} />;
+          return (
+            <EventsAdminPanel
+              events={events}
+              onAdd={actions.addEvent}
+              onRemove={actions.removeEvent}
+              onRefreshResponses={actions.refreshEventResponses}
+            />
+          );
         default:
           return null;
       }
@@ -247,7 +254,7 @@ export default function Dashboard({ role, name, me, email, domain, onLogout }) {
       case "Career Tools":
         return <CareerToolsPanel me={safeMe} jobs={jobs} alumni={alumni} surveyResponses={surveyResponses} />;
       case "Events & Activities":
-        return <EventsAlumniPanel events={events} me={safeMe} onRsvp={actions.rsvpEvent} />;
+        return <EventsAlumniPanel events={events} onRsvp={actions.rsvpEvent} />;
       default:
         return null;
     }
