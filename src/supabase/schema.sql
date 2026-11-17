@@ -12,6 +12,22 @@
 --    alumni_skills_history    -> timestamped skill snapshots
 --    skill_recommendations    -> AI-generated skill suggestions
 --    admin_activity_logs      -> audit trail of every admin action
+--    posts_response           -> normalized event RSVP/feedback records
+--    job_alignment            -> persisted job/course alignment results
+--    alumni_job_history       -> employment history per alumnus
+--
+--  DFD/ERD aliases:
+--    DB1 auth.user             -> auth.users (Supabase-managed)
+--    DB2 profiles              -> alumni
+--    DB3 alumni_survey_response -> survey_responses
+--    DB4 job_recommendation    -> skill_recommendations
+--    DB5 notification          -> notifications
+--    DB6 posts                 -> events
+--    DB7 posts_response        -> posts_response
+--    DB8 job_alignment         -> job_alignment
+--    DB9 user_skills           -> alumni.skills (JSONB column)
+--    DB10 alumni_job_history   -> alumni_job_history
+--    DB11 jobs                 -> jobs
 --
 --  Security model:
 --    - Admin access requires trusted Supabase app_metadata.role = 'admin'.
@@ -164,24 +180,105 @@ create table if not exists public.events (
   created_by uuid,
   title      text not null,
   description text default '',
+  type       text not null default 'event',
   date       date,
   rsvps      jsonb default '[]'::jsonb,
   created_at timestamptz default timezone('utc', now())
 );
 alter table public.events add column if not exists created_by uuid;
 alter table public.events add column if not exists description text default '';
+alter table public.events add column if not exists type text not null default 'event';
+
+-- ----------------------------- posts_response --------------------------
+-- Kept separate for the DFD/ERD; the current app continues to use events.rsvps.
+create table if not exists public.posts_response (
+  id          uuid primary key default gen_random_uuid(),
+  event_id    uuid not null references public.events(id) on delete cascade,
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  response    text not null check (response in ('going', 'not_going')),
+  feedback    text not null default '',
+  created_at  timestamptz not null default timezone('utc', now()),
+  updated_at  timestamptz not null default timezone('utc', now()),
+  constraint posts_response_event_user_key unique (event_id, user_id)
+);
+
+-- ------------------------------ job_alignment --------------------------
+-- Stores per-user matching results; the current app still calculates these
+-- results on demand and does not write to this table yet.
+create table if not exists public.job_alignment (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references auth.users(id) on delete cascade,
+  job_id         uuid not null references public.jobs(id) on delete cascade,
+  program        text not null default '',
+  score          numeric(5, 2) not null check (score >= 0 and score <= 100),
+  matched_skills jsonb not null default '[]'::jsonb,
+  missing_skills jsonb not null default '[]'::jsonb,
+  reason         text not null default '',
+  calculated_at  timestamptz not null default timezone('utc', now()),
+  constraint job_alignment_user_job_key unique (user_id, job_id)
+);
+
+-- --------------------------- alumni_job_history -----------------------
+create table if not exists public.alumni_job_history (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  title       text not null,
+  company     text not null default '',
+  started_at  date,
+  ended_at    date,
+  created_at  timestamptz not null default timezone('utc', now()),
+  constraint alumni_job_history_dates_check
+    check (ended_at is null or started_at is null or ended_at >= started_at)
+);
 
 -- ------------------------------- notifications -------------------------
 create table if not exists public.notifications (
   id         uuid primary key default gen_random_uuid(),
   created_by uuid,
+  title      text not null default '',
+  body       text not null default '',
+  type       text not null default 'general',
   text       text default '',
   date       date,
   target     text default '',
   created_at timestamptz default timezone('utc', now())
 );
 alter table public.notifications add column if not exists created_by uuid;
+alter table public.notifications add column if not exists title text not null default '';
+alter table public.notifications add column if not exists body text not null default '';
+alter table public.notifications add column if not exists type text not null default 'general';
 alter table public.notifications add column if not exists link text default '';
+
+-- Keep the existing app's `text` field aligned with the DFD/ERD `body` field.
+update public.notifications
+set body = coalesce(text, '')
+where body = '' and coalesce(text, '') <> '';
+
+create or replace function public.sync_notification_body()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'INSERT' then
+    if new.body <> '' then
+      new.text = new.body;
+    else
+      new.body = coalesce(new.text, '');
+    end if;
+  elsif new.body is distinct from old.body then
+    new.text = coalesce(new.body, '');
+  else
+    new.body = coalesce(new.text, '');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_notifications_sync_body on public.notifications;
+create trigger trg_notifications_sync_body
+before insert or update on public.notifications
+for each row
+execute function public.sync_notification_body();
 
 -- --------------------------- survey_responses --------------------------
 -- Append-only employment survey history. The alumni table stores the latest
@@ -412,6 +509,9 @@ alter table public.survey_responses       enable row level security;
 alter table public.alumni_skills_history  enable row level security;
 alter table public.skill_recommendations enable row level security;
 alter table public.admin_activity_logs    enable row level security;
+alter table public.posts_response        enable row level security;
+alter table public.job_alignment         enable row level security;
+alter table public.alumni_job_history    enable row level security;
 
 -- Legacy demo policies from the first schema version — dropped so the
 -- new authenticated model below takes over cleanly.
@@ -438,6 +538,9 @@ drop policy if exists "read survey_responses"       on public.survey_responses;
 drop policy if exists "read alumni_skills_history"  on public.alumni_skills_history;
 drop policy if exists "read skill_recommendations" on public.skill_recommendations;
 drop policy if exists "read admin_activity_logs"    on public.admin_activity_logs;
+drop policy if exists "read posts_response"         on public.posts_response;
+drop policy if exists "read job_alignment"          on public.job_alignment;
+drop policy if exists "read alumni_job_history"     on public.alumni_job_history;
 
 drop policy if exists "signed in insert alumni"                 on public.alumni;
 drop policy if exists "signed in update alumni"                 on public.alumni;
@@ -463,6 +566,15 @@ drop policy if exists "signed in delete skill_recommendations" on public.skill_r
 drop policy if exists "signed in insert admin_activity_logs"    on public.admin_activity_logs;
 drop policy if exists "signed in update admin_activity_logs"    on public.admin_activity_logs;
 drop policy if exists "signed in delete admin_activity_logs"    on public.admin_activity_logs;
+drop policy if exists "signed in insert posts_response"         on public.posts_response;
+drop policy if exists "signed in update posts_response"         on public.posts_response;
+drop policy if exists "signed in delete posts_response"         on public.posts_response;
+drop policy if exists "signed in insert job_alignment"           on public.job_alignment;
+drop policy if exists "signed in update job_alignment"           on public.job_alignment;
+drop policy if exists "signed in delete job_alignment"           on public.job_alignment;
+drop policy if exists "signed in insert alumni_job_history"     on public.alumni_job_history;
+drop policy if exists "signed in update alumni_job_history"     on public.alumni_job_history;
+drop policy if exists "signed in delete alumni_job_history"     on public.alumni_job_history;
 
 -- The admin role is trusted only when stored in Supabase app_metadata.
 -- Public profile and account-linked data are visible only to their owner/admin.
@@ -479,13 +591,21 @@ create policy "read skill_recommendations" on public.skill_recommendations for s
   using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 create policy "read admin_activity_logs"    on public.admin_activity_logs    for select
   using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "read posts_response" on public.posts_response for select
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "read job_alignment" on public.job_alignment for select
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "read alumni_job_history" on public.alumni_job_history for select
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
 revoke all on public.alumni, public.survey_responses, public.alumni_skills_history,
-  public.skill_recommendations, public.admin_activity_logs from anon;
+  public.skill_recommendations, public.admin_activity_logs, public.posts_response,
+  public.job_alignment, public.alumni_job_history from anon;
 grant select on public.jobs, public.events, public.notifications to anon, authenticated;
 grant select, insert, update, delete on public.alumni, public.jobs, public.events,
   public.notifications, public.survey_responses, public.alumni_skills_history,
-  public.skill_recommendations, public.admin_activity_logs
+  public.skill_recommendations, public.admin_activity_logs, public.posts_response,
+  public.job_alignment, public.alumni_job_history
   to authenticated;
 
 create policy "signed in insert alumni" on public.alumni for insert
@@ -553,7 +673,34 @@ create policy "signed in update admin_activity_logs" on public.admin_activity_lo
 create policy "signed in delete admin_activity_logs" on public.admin_activity_logs for delete
   using (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
 
+create policy "signed in insert posts_response" on public.posts_response for insert
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update posts_response" on public.posts_response for update
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete posts_response" on public.posts_response for delete
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+
+create policy "signed in insert job_alignment" on public.job_alignment for insert
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update job_alignment" on public.job_alignment for update
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete job_alignment" on public.job_alignment for delete
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+
+create policy "signed in insert alumni_job_history" on public.alumni_job_history for insert
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in update alumni_job_history" on public.alumni_job_history for update
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+  with check (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+create policy "signed in delete alumni_job_history" on public.alumni_job_history for delete
+  using (user_id = auth.uid() or auth.jwt() -> 'app_metadata' ->> 'role' = 'admin');
+
 create index if not exists alumni_user_id_idx                 on public.alumni (user_id);
+create index if not exists posts_response_user_idx            on public.posts_response (user_id);
+create index if not exists job_alignment_user_idx             on public.job_alignment (user_id);
+create index if not exists alumni_job_history_user_idx        on public.alumni_job_history (user_id);
 do $$
 begin
   if not exists (

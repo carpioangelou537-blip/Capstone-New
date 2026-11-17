@@ -121,9 +121,33 @@ do not guarantee a particular career or hiring outcome.
 Run SQL in the Supabase SQL Editor for the same project configured in the
 frontend environment. These scripts have different scopes:
 
+### DFD/ERD database mapping
+
+| DB | DFD/ERD name | Supabase table or column | Purpose / current app flow |
+|---|---|---|---|
+| DB1 | `auth.user` | `auth.users` | Supabase Auth login accounts; managed by Supabase |
+| DB2 | `profiles` | `public.alumni` | Alumni and admin profiles |
+| DB3 | `alumni_survey_response` | `public.survey_responses` | Submitted employment and skills survey history |
+| DB4 | `job_recommendation` | `public.skill_recommendations` | AI skill recommendations |
+| DB5 | `notification` | `public.notifications` (`title`, `body`, `type`, `created_by`) | Admin-created messages; legacy `text` remains synchronized with `body` for the current app |
+| DB6 | `posts` | `public.events` (`title`, `date`, `type`, `description`) | Admin-created event postings |
+| DB7 | `posts_response` | `public.posts_response` | Normalized RSVP status and optional feedback; the current app still stores RSVPs in `events.rsvps` |
+| DB8 | `job_alignment` | `public.job_alignment` | Per-user job/course alignment result storage; the current app calculates alignment on demand |
+| DB9 | `user_skills` | `public.alumni.skills` | Skills stored as a JSONB column on the alumni profile |
+| DB10 | `alumni_job_history` | `public.alumni_job_history` | Job history per alumnus; retained but not currently used by the app |
+| DB11 | `jobs` | `public.jobs` | Admin-posted job suggestions |
+
+The DB7 and DB8 tables are present for the DFD/ERD without changing current
+RSVP or alignment behavior. Existing event RSVP data remains in `events.rsvps`;
+it is not automatically copied because it stores names rather than Auth user
+IDs. DB10 is kept in the schema even though the app does not currently use it.
+
 - `src/supabase/schema.sql` — full schema for a fresh setup or a complete
-  schema refresh. It includes RLS policies and the current table definitions.
+  schema refresh. It includes RLS policies and the current table definitions,
+  including `posts_response`, `job_alignment`, and `alumni_job_history`.
   It also drops the retired `course_competencies` table.
+- `src/supabase/dfd_erd_tables.sql` — targeted, rerunnable additions for an
+  existing database: DB7, DB8, DB10, and the DFD fields for DB5 and DB6.
 - `src/supabase/password_reset_requests.sql` — removes the retired admin
   password recovery request queue from an existing database.
 - `src/supabase/ml_schema.sql` — focused additions for an existing base
