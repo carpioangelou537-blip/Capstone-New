@@ -109,14 +109,14 @@ export default function App() {
         setUser(null);
       }
     });
-    api.getSessionUser().then(async (u) => {
+    api.getSessionUser().then((u) => {
       if (!active) return;
       if (u) {
         setUser(u);
         setRole(userRole(u));
         setName(userDisplayName(u));
-        await ensureAlumnusRow(u);
         if (!passwordRecovery.current) setPage("splash");
+        ensureAlumnusRow(u);
       }
       setAuthChecked(true);
     }).catch(() => {

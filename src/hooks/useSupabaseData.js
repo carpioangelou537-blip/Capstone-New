@@ -11,6 +11,8 @@ import {
 } from "../lib/seed";
 import * as api from "../lib/supabaseService";
 
+const DATA_LOAD_TIMEOUT_MS = 15000;
+
 /**
  * Loads all app data from Supabase. When nobody is signed in (or Supabase
  * is unreachable) it falls back to the bundled seed data so the landing
@@ -53,8 +55,17 @@ export function useSupabaseData(user, refreshKey = 0) {
     setLoading(true);
 
     async function load() {
+      let timeoutId;
       try {
-        const remote = await api.fetchAll();
+        const remote = await Promise.race([
+          api.fetchAll(),
+          new Promise((_, reject) => {
+            timeoutId = setTimeout(
+              () => reject(new Error(`Supabase data request timed out after ${DATA_LOAD_TIMEOUT_MS / 1000} seconds.`)),
+              DATA_LOAD_TIMEOUT_MS,
+            );
+          }),
+        ]);
         if (cancelled) return;
         setAlumni(remote.alumni);
         setJobs(remote.jobs);
@@ -65,8 +76,9 @@ export function useSupabaseData(user, refreshKey = 0) {
         setSkillRecommendations(remote.skillRecommendations);
         setAdminActivityLogs(remote.adminActivityLogs);
         setDbStatus("connected");
-      } catch {
+      } catch (error) {
         if (cancelled) return;
+        console.error("Could not load data from Supabase; showing the dashboard without remote data.", error);
         setAlumni([]);
         setJobs([]);
         setEvents([]);
@@ -77,6 +89,7 @@ export function useSupabaseData(user, refreshKey = 0) {
         setAdminActivityLogs([]);
         setDbStatus("offline");
       } finally {
+        clearTimeout(timeoutId);
         if (!cancelled) setLoading(false);
       }
     }
