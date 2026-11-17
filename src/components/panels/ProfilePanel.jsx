@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Icon from "../ui/Icon";
 
 export default function ProfilePanel({ me, email, latestSurveyStatus, latestSurvey, onSave }) {
@@ -12,6 +12,18 @@ export default function ProfilePanel({ me, email, latestSurveyStatus, latestSurv
   const [avatar, setAvatar] = useState(me.avatar || null);
   const [saved, setSaved] = useState(false);
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    setName(me.name || "");
+    setProgram(me.program || "");
+    setGradYear(me.gradYear || "");
+    setDateOfBirth(me.dateOfBirth || "");
+    setAddress(me.address || "");
+    setContactNumber(me.contactNumber || "");
+    setEmailAddress(email || "");
+    setAvatar(me.avatar || null);
+  }, [me, email]);
+
   const age = dateOfBirth ? (() => {
     const [year, month, day] = dateOfBirth.split("-").map(Number);
     const today = new Date();
@@ -60,7 +72,7 @@ export default function ProfilePanel({ me, email, latestSurveyStatus, latestSurv
         <div className="row">
           <label>Full name<input value={name} onChange={(e) => setName(e.target.value)} /></label>
           <label>Program<input value={program} onChange={(e) => setProgram(e.target.value)} /></label>
-          <label>Year graduated<input value={gradYear} onChange={(e) => setGradYear(e.target.value)} /></label>
+          <label>Year graduated<input type="number" min="1900" max={new Date().getFullYear()} value={gradYear} onChange={(e) => setGradYear(e.target.value)} /></label>
         </div>
         <div className="row">
           <label>Date of Birth<input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} /></label>

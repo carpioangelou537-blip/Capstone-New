@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { STYLES } from "./styles/global";
 import { uid, todayString, getSkillGaps } from "./lib/utils";
-import { PROGRAM_OPTIONS, CURRENT_YEAR } from "./lib/constants";
+import { PROGRAM_OPTIONS } from "./lib/constants";
 import * as api from "./lib/supabaseService";
 import { hasSupabaseEnv } from "./supabaseClient";
 import { useSupabaseData } from "./hooks/useSupabaseData";
@@ -182,10 +182,15 @@ export default function App() {
     if (pendingRequest) return pendingRequest;
 
     const request = (async () => {
+      const meta = u.user_metadata || {};
+      const metadataGradYear = meta.gradYear ? String(meta.gradYear) : "";
       const existing = await api.fetchMyAlumnus(u.id);
       if (existing) {
-        if (u.email && existing.email !== u.email) {
-          await api.updateAlumnus(existing.id, { email: u.email });
+        const patch = {};
+        if (u.email && existing.email !== u.email) patch.email = u.email;
+        if (!existing.gradYear && metadataGradYear) patch.gradYear = metadataGradYear;
+        if (Object.keys(patch).length > 0) {
+          await api.updateAlumnus(existing.id, patch);
           setRefresh((k) => k + 1);
         }
         return;
@@ -194,20 +199,23 @@ export default function App() {
       if (displayName) {
         const unlinked = await api.findUnlinkedAlumnusByName(displayName);
         if (unlinked) {
-          await api.updateAlumnus(unlinked.id, { userId: u.id, email: u.email || "" });
+          await api.updateAlumnus(unlinked.id, {
+            userId: u.id,
+            email: u.email || "",
+            ...(!unlinked.gradYear && metadataGradYear ? { gradYear: metadataGradYear } : {}),
+          });
           addToast(`Welcome back, ${displayName} — your account is linked.`);
           setRefresh((k) => k + 1);
           return;
         }
       }
-      const meta = u.user_metadata || {};
       const record = {
         id: uid(),
         userId: u.id,
         name: userDisplayName(u) || "Alumnus",
         email: u.email || "",
         program: meta.program || PROGRAM_OPTIONS[0],
-        gradYear: meta.gradYear ? String(meta.gradYear) : String(CURRENT_YEAR),
+        gradYear: metadataGradYear,
         dateOfBirth: meta.dateOfBirth || "",
         contactNumber: meta.contactNumber || "",
         address: meta.address || "",
